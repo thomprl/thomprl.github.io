@@ -432,8 +432,15 @@
   .bar-row .label.has-tip{left:auto;}
   .top-gift-card .name.has-tip{display:inline-block;}
 
-  /* ---------- Print definitions block (screen: hidden) ---------- */
-  .print-definitions{display:none;}
+  /* ---------- Top-5 definitions block (visible on screen and in print) ---------- */
+  .print-definitions{
+    margin-top:32px;
+    background:var(--card);
+    border:1px solid var(--paper-line);
+    border-radius:6px;
+    padding:24px 26px;
+    box-shadow:var(--shadow);
+  }
   .print-def-item{margin-bottom:14px;}
   .print-def-item h4{
     font-family:'Lora', serif;
