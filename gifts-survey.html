@@ -114,10 +114,11 @@
 
   /* ---------- Dev / testing helper ---------- */
   .dev-row{
-    display:flex;
+    display:none;
     justify-content:center;
     margin:14px 0 0;
   }
+  .dev-row.show{display:flex;}
   .dev-btn{
     font-family:'IBM Plex Mono', monospace;
     font-size:12px;
@@ -720,6 +721,13 @@ const giftInfo = {
 };
 
 const qlist = document.getElementById('qlist');
+
+// Show the testing helper only when the URL includes ?testing=y
+const urlParams = new URLSearchParams(window.location.search);
+if(urlParams.get('testing') === 'y'){
+  document.querySelector('.dev-row').classList.add('show');
+}
+
 questions.forEach((text, i) => {
   const num = i + 1;
   const row = document.createElement('div');
