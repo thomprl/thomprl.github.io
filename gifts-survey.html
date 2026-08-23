@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spiritual Gifts Survey</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;1,500&family=Source+Sans+3:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F7F3E9;
+    --paper-line:#DED3BC;
+    --ink:#2C2620;
+    --ink-soft:#6B6154;
+    --teal:#31564A;
+    --teal-deep:#1F3B33;
+    --gold:#A97C1F;
+    --gold-soft:#E8D9B0;
+    --brick:#9C4A34;
+    --card:#FFFDF8;
+    --shadow: 0 1px 0 rgba(44,38,32,0.06);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Source Sans 3', sans-serif;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:840px;margin:0 auto;padding:0 24px 100px;}
+
+  /* ---------- Header ---------- */
+  header{
+    padding:56px 24px 36px;
+    text-align:center;
+    border-bottom:1px solid var(--paper-line);
+    background:
+      linear-gradient(var(--paper),var(--paper));
+    position:relative;
+  }
+  header::after{
+    content:"";
+    display:block;
+    width:64px;height:2px;
+    background:var(--gold);
+    margin:22px auto 0;
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--teal);
+    margin-bottom:14px;
+  }
+  h1{
+    font-family:'Lora', serif;
+    font-weight:600;
+    font-size:clamp(30px,5vw,44px);
+    margin:0;
+    color:var(--teal-deep);
+  }
+  header p{
+    max-width:520px;
+    margin:16px auto 0;
+    color:var(--ink-soft);
+    font-size:15.5px;
+  }
+
+  /* ---------- Progress ---------- */
+  .progress-bar{
+    position:sticky; top:0; z-index:50;
+    background:var(--paper);
+    border-bottom:1px solid var(--paper-line);
+    padding:10px 24px;
+    display:flex; align-items:center; gap:14px;
+  }
+  .progress-track{
+    flex:1; height:6px; background:var(--paper-line); border-radius:3px; overflow:hidden;
+  }
+  .progress-fill{
+    height:100%; width:0%; background:var(--teal); transition:width .25s ease;
+  }
+  .progress-label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px; color:var(--ink-soft); white-space:nowrap;
+  }
+
+  /* ---------- Scale legend ---------- */
+  .legend{
+    margin:32px 0 8px;
+    background:var(--card);
+    border:1px solid var(--paper-line);
+    border-radius:6px;
+    padding:18px 20px;
+    box-shadow:var(--shadow);
+  }
+  .legend h2{
+    font-family:'Lora', serif;
+    font-size:15px;
+    margin:0 0 10px;
+    color:var(--teal-deep);
+  }
+  .legend-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+    gap:6px 18px;
+    font-size:13.5px;
+    color:var(--ink-soft);
+  }
+  .legend-grid b{color:var(--ink);}
+
+  /* ---------- Questions ---------- */
+  .qlist{margin-top:28px;}
+  .q{
+    display:flex;
+    align-items:flex-start;
+    gap:16px;
+    padding:16px 4px;
+    border-bottom:1px solid var(--paper-line);
+  }
+  .qnum{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+    color:var(--gold);
+    width:26px;
+    flex-shrink:0;
+    padding-top:2px;
+    text-align:right;
+  }
+  .qtext{flex:1; font-size:15px; padding-top:1px;}
+  .qscale{
+    display:flex;
+    gap:6px;
+    flex-shrink:0;
+  }
+  .qscale label{
+    position:relative;
+  }
+  .qscale input{
+    position:absolute; opacity:0; width:100%; height:100%; margin:0; cursor:pointer;
+  }
+  .qscale span{
+    display:flex; align-items:center; justify-content:center;
+    width:30px; height:30px;
+    border:1px solid var(--paper-line);
+    border-radius:50%;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+    color:var(--ink-soft);
+    background:var(--card);
+    transition:all .12s ease;
+  }
+  .qscale input:checked + span{
+    background:var(--teal);
+    border-color:var(--teal);
+    color:#fff;
+  }
+  .qscale input:focus-visible + span{
+    outline:2px solid var(--gold);
+    outline-offset:2px;
+  }
+  .qscale span:hover{border-color:var(--teal);}
+  .q.answered{background:rgba(49,86,74,0.035);}
+
+  /* ---------- Submit area ---------- */
+  .submit-row{
+    margin-top:36px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:10px;
+  }
+  #missingNote{
+    font-size:13.5px; color:var(--brick); font-family:'IBM Plex Mono', monospace;
+    display:none;
+  }
+  button#scoreBtn{
+    font-family:'Lora', serif;
+    font-weight:600;
+    font-size:17px;
+    color:#fff;
+    background:var(--teal-deep);
+    border:none;
+    padding:15px 40px;
+    border-radius:4px;
+    cursor:pointer;
+    letter-spacing:.02em;
+    transition:background .15s ease, transform .1s ease;
+  }
+  button#scoreBtn:hover{background:var(--teal);}
+  button#scoreBtn:active{transform:translateY(1px);}
+
+  /* ---------- Results ---------- */
+  #results{display:none; margin-top:56px;}
+  .results-head{
+    text-align:center;
+    margin-bottom:32px;
+  }
+  .results-head .eyebrow{margin-bottom:10px;}
+  .results-head h2{
+    font-family:'Lora', serif;
+    font-size:28px;
+    margin:0;
+    color:var(--teal-deep);
+  }
+
+  .top-gifts{
+    display:flex; gap:14px; justify-content:center; flex-wrap:wrap;
+    margin:24px 0 40px;
+  }
+  .top-gift-card{
+    background:var(--card);
+    border:1px solid var(--gold-soft);
+    border-radius:6px;
+    padding:16px 22px;
+    text-align:center;
+    min-width:130px;
+    box-shadow:var(--shadow);
+  }
+  .top-gift-card .rank{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px; letter-spacing:.1em; color:var(--gold); text-transform:uppercase;
+  }
+  .top-gift-card .name{
+    font-family:'Lora', serif;
+    font-weight:600;
+    font-size:18px;
+    color:var(--teal-deep);
+    margin-top:4px;
+  }
+  .top-gift-card .score{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px; color:var(--ink-soft); margin-top:2px;
+  }
+
+  /* Chart */
+  .chart{
+    background:var(--card);
+    border:1px solid var(--paper-line);
+    border-radius:6px;
+    padding:28px 28px 20px;
+    box-shadow:var(--shadow);
+  }
+  .chart-scale{
+    display:grid;
+    grid-template-columns:150px 1fr;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    color:var(--ink-soft);
+    margin-bottom:6px;
+  }
+  .chart-scale .ticks{
+    display:grid;
+    grid-template-columns:repeat(6,1fr);
+    text-align:left;
+  }
+  .bar-row{
+    display:grid;
+    grid-template-columns:150px 1fr;
+    align-items:center;
+    gap:10px;
+    padding:7px 0;
+  }
+  .bar-row .label{
+    font-size:13.5px;
+    color:var(--ink);
+    text-align:right;
+    padding-right:4px;
+  }
+  .bar-track{
+    position:relative;
+    height:20px;
+    background:repeating-linear-gradient(
+      to right,
+      transparent, transparent calc(20% - 1px),
+      var(--paper-line) calc(20% - 1px), var(--paper-line) 20%
+    );
+    border-radius:2px;
+    overflow:hidden;
+  }
+  .bar-fill{
+    height:100%;
+    width:0%;
+    background:linear-gradient(90deg, var(--teal) 0%, var(--teal-deep) 100%);
+    border-radius:2px 0 0 2px;
+    transition:width .7s cubic-bezier(.4,0,.2,1);
+    display:flex; align-items:center; justify-content:flex-end;
+  }
+  .bar-fill.top{background:linear-gradient(90deg, var(--gold) 0%, #8C6314 100%);}
+  .bar-fill .val{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    color:#fff;
+    padding-right:6px;
+  }
+
+  .reflect{
+    margin-top:40px;
+    background:var(--card);
+    border:1px solid var(--paper-line);
+    border-radius:6px;
+    padding:24px 26px;
+    box-shadow:var(--shadow);
+  }
+  .reflect h3{
+    font-family:'Lora', serif;
+    font-size:17px;
+    margin:0 0 6px;
+    color:var(--teal-deep);
+  }
+  .reflect p{color:var(--ink-soft); font-size:14px; margin:0 0 16px;}
+  .reflect textarea{
+    width:100%;
+    border:1px solid var(--paper-line);
+    border-radius:4px;
+    background:var(--paper);
+    font-family:'Source Sans 3', sans-serif;
+    font-size:14px;
+    padding:10px 12px;
+    resize:vertical;
+    min-height:44px;
+    color:var(--ink);
+  }
+  .reflect label{
+    display:block;
+    font-size:13.5px;
+    color:var(--ink);
+    margin:14px 0 6px;
+  }
+  .reflect label:first-of-type{margin-top:0;}
+
+  .actions-row{
+    display:flex; gap:12px; justify-content:center; margin-top:32px; flex-wrap:wrap;
+  }
+  .ghost-btn{
+    font-family:'Source Sans 3', sans-serif;
+    font-weight:600;
+    font-size:14px;
+    color:var(--teal-deep);
+    background:transparent;
+    border:1px solid var(--teal-deep);
+    padding:11px 22px;
+    border-radius:4px;
+    cursor:pointer;
+  }
+  .ghost-btn:hover{background:var(--teal-deep); color:#fff;}
+
+  footer{
+    text-align:center;
+    font-size:12px;
+    color:var(--ink-soft);
+    margin-top:60px;
+    font-family:'IBM Plex Mono', monospace;
+  }
+
+  @media (max-width:560px){
+    .bar-row, .chart-scale{grid-template-columns:104px 1fr;}
+    .bar-row .label{font-size:12px;}
+    .qscale span{width:26px;height:26px;font-size:12px;}
+    .qscale{gap:4px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="progress-bar">
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="progress-label" id="progressLabel">0 / 80 answered</div>
+</div>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Lifeway Christian Resources · Revised 2022</div>
+    <h1>Spiritual Gifts Survey</h1>
+    <p>80 statements. No wrong answers. Give the response that first comes to mind — how well each statement describes you, not how you wish it did.</p>
+  </header>
+
+  <div class="legend">
+    <h2>Your response choices</h2>
+    <div class="legend-grid">
+      <div><b>5</b> — Highly characteristic of me / definitely true</div>
+      <div><b>4</b> — Most of the time this describes me</div>
+      <div><b>3</b> — Frequently true, about 50% of the time</div>
+      <div><b>2</b> — Occasionally true, about 25% of the time</div>
+      <div><b>1</b> — Not at all characteristic of me</div>
+    </div>
+  </div>
+
+  <form id="surveyForm">
+    <div class="qlist" id="qlist"></div>
+
+    <div class="submit-row">
+      <div id="missingNote">Please answer every statement — <span id="missingCount"></span> remaining.</div>
+      <button type="submit" id="scoreBtn">Score My Survey</button>
+    </div>
+  </form>
+
+  <div id="results">
+    <div class="results-head">
+      <div class="eyebrow">Your Results</div>
+      <h2>Your Spiritual Gifts Profile</h2>
+    </div>
+
+    <div class="top-gifts" id="topGifts"></div>
+
+    <div class="chart">
+      <div class="chart-scale">
+        <div></div>
+        <div class="ticks"><span>0</span><span>5</span><span>10</span><span>15</span><span>20</span><span>25</span></div>
+      </div>
+      <div id="chartBars"></div>
+    </div>
+
+    <div class="reflect">
+      <h3>Now that you've completed the survey</h3>
+      <p>Thoughtfully answer the following. These stay on this page only — nothing is sent anywhere.</p>
+      <label for="r1">The gifts I have begun to discover in my life are:</label>
+      <textarea id="r1" rows="2"></textarea>
+      <label for="r2">After prayer and worship, I am beginning to sense that God wants me to use my spiritual gifts to serve Christ's body by:</label>
+      <textarea id="r2" rows="2"></textarea>
+      <label for="r3">Notes — where I might begin to use these gifts in ministry:</label>
+      <textarea id="r3" rows="3"></textarea>
+    </div>
+
+    <div class="actions-row">
+      <button type="button" class="ghost-btn" id="retakeBtn">Retake Survey</button>
+      <button type="button" class="ghost-btn" id="printBtn">Print / Save Results</button>
+    </div>
+  </div>
+
+  <footer>© 2003 Lifeway Christian Resources, revised 2022</footer>
+</div>
+
+<script>
+const questions = [
+"I have the ability to organize ideas, resources, time, and people effectively.",
+"I am willing to study and prepare for the task of teaching.",
+"I am able to relate the truths of God to specific situations.",
+"I have a God-given ability to help others grow in their faith.",
+"I possess a special ability to communicate the truth of salvation.",
+"I have the ability to make critical decisions when necessary.",
+"I am sensitive to the hurts of people.",
+"I experience joy in meeting needs through sharing possessions.",
+"I enjoy studying.",
+"I have delivered God's message of warning and judgment.",
+"I am able to sense the true motivation of persons and movements.",
+"I have a special ability to trust God in difficult situations.",
+"I have a strong desire to contribute to the establishment of new churches.",
+"I take action to meet physical and practical needs rather than merely talking about or planning how to help.",
+"I enjoy entertaining guests in my home.",
+"I can adapt my guidance to fit the maturity of those working with me.",
+"I can delegate and assign meaningful work.",
+"I have an ability and desire to teach.",
+"I am usually able to analyze a situation correctly.",
+"I have a natural tendency to encourage others.",
+"I am willing to take the initiative in helping other Christians grow in their faith.",
+"I have an acute awareness of other people's emotions, such as loneliness, pain, fear, and anger.",
+"I am a cheerful giver.",
+"I spend time digging into facts.",
+"I feel that I have a message from God to deliver to others.",
+"I can recognize when a person is genuine/honest.",
+"I am a person of vision (a clear mental portrait of a preferable future given by God). I am able to communicate vision in such a way that others commit to making the vision a reality.",
+"I am willing to yield to God's will rather than question and waver.",
+"I would like to be more active in getting the gospel to people in other countries.",
+"It makes me happy to do things for people in need.",
+"I am successful in getting a group to do its work joyfully.",
+"I am able to make strangers feel at ease.",
+"I have the ability to teach to a variety of different learning styles.",
+"I can identify those who need encouragement.",
+"I have trained Christians to be more obedient disciples of Christ.",
+"I am willing to do whatever it takes to see others come to Christ.",
+"I am drawn to people who are hurting.",
+"I am a generous giver.",
+"I am able to discover new truths in Scripture.",
+"I have spiritual insights from Scripture concerning issues and people that compel me to speak out.",
+"I can sense when a person is acting in accordance with God's will.",
+"I can trust in God even when things look dark.",
+"I can determine where God wants a group to go and help it get there.",
+"I have a strong desire to take the gospel to places where it has never been heard.",
+"I enjoy reaching out to new people in my church and community.",
+"I am sensitive to the needs of people.",
+"I have been able to make effective and efficient plans for accomplishing the goals of a group.",
+"I often am consulted when fellow Christians are struggling to make difficult decisions.",
+"I think about how I can comfort and encourage others in my congregation.",
+"I am able to give spiritual direction to others.",
+"I am able to present the gospel to lost persons in such a way that they accept the Lord and His salvation.",
+"I possess an unusual capacity to understand the feelings of those in distress.",
+"I have a strong sense of stewardship based on the recognition that God owns all things.",
+"I have delivered to other persons messages that have come directly from God.",
+"I can sense when a person is acting under God's leadership.",
+"I try to be in God's will continually and be available for His use.",
+"I feel that I should take the gospel to people who have different beliefs from me.",
+"I have an acute awareness of the physical needs of others.",
+"I am skilled in setting forth positive and precise steps of action.",
+"I like to meet visitors at church and make them feel welcome.",
+"I explain Scripture in such a way that others understand it.",
+"I can usually see spiritual solutions to problems.",
+"I welcome opportunities to help people who need comfort, consolation, encouragement, and counseling.",
+"I feel at ease in sharing Christ with nonbelievers.",
+"I can influence others to perform to their highest God-given potential.",
+"I recognize the signs of stress and distress in others.",
+"I desire to give generously and unpretentiously to worthwhile projects and ministries.",
+"I can organize facts into meaningful relationships.",
+"God gives me messages to deliver to His people.",
+"I am able to sense whether people are being honest when they tell of their religious experiences.",
+"I enjoy presenting the gospel to persons of other cultures and backgrounds.",
+"I enjoy doing little things that help people.",
+"I can give a clear, uncomplicated presentation of the gospel.",
+"I have been able to apply biblical truth to the specific needs of my church.",
+"God has used me to encourage others to live Christlike lives.",
+"I have sensed the need to help other people become more effective in their ministries.",
+"I like to talk about Jesus to those who do not know Him.",
+"I have the ability to make strangers feel comfortable in my home.",
+"I have a wide range of study resources and know how to secure information.",
+"I feel assured that a situation will change for the glory of God even when the situation seem impossible."
+];
+
+const giftMap = {
+  "Leadership":       [6,16,27,43,65],
+  "Administration":   [1,17,31,47,59],
+  "Teaching":         [2,18,33,61,73],
+  "Knowledge":        [9,24,39,68,79],
+  "Wisdom":           [3,19,48,62,74],
+  "Prophecy":         [10,25,40,54,69],
+  "Discernment":      [11,26,41,55,70],
+  "Exhortation":      [20,34,49,63,75],
+  "Shepherding":      [4,21,35,50,76],
+  "Faith":            [12,28,42,56,80],
+  "Evangelism":       [5,36,51,64,77],
+  "Apostleship":      [13,29,44,57,71],
+  "Service/Helps":    [14,30,46,58,72],
+  "Mercy":            [7,22,37,52,66],
+  "Giving":           [8,23,38,53,67],
+  "Hospitality":      [15,32,45,60,78]
+};
+
+const qlist = document.getElementById('qlist');
+questions.forEach((text, i) => {
+  const num = i + 1;
+  const row = document.createElement('div');
+  row.className = 'q';
+  row.id = 'q-row-' + num;
+  row.innerHTML = `
+    <div class="qnum">${num}.</div>
+    <div class="qtext">${text}</div>
+    <div class="qscale">
+      ${[1,2,3,4,5].map(v => `
+        <label>
+          <input type="radio" name="q${num}" value="${v}" data-q="${num}">
+          <span>${v}</span>
+        </label>
+      `).join('')}
+    </div>
+  `;
+  qlist.appendChild(row);
+});
+
+const progressFill = document.getElementById('progressFill');
+const progressLabel = document.getElementById('progressLabel');
+const totalQ = questions.length;
+
+function updateProgress(){
+  const answered = document.querySelectorAll('#surveyForm input[type=radio]:checked').length;
+  progressFill.style.width = (answered/totalQ*100) + '%';
+  progressLabel.textContent = answered + ' / ' + totalQ + ' answered';
+  return answered;
+}
+
+qlist.addEventListener('change', (e) => {
+  if(e.target.matches('input[type=radio]')){
+    const num = e.target.dataset.q;
+    document.getElementById('q-row-' + num).classList.add('answered');
+    updateProgress();
+  }
+});
+
+document.getElementById('surveyForm').addEventListener('submit', function(e){
+  e.preventDefault();
+  const answered = updateProgress();
+  const missingNote = document.getElementById('missingNote');
+  if(answered < totalQ){
+    missingNote.style.display = 'block';
+    document.getElementById('missingCount').textContent = (totalQ - answered);
+    // scroll to first unanswered
+    for(let i=1;i<=totalQ;i++){
+      if(!document.querySelector(`input[name=q${i}]:checked`)){
+        document.getElementById('q-row-'+i).scrollIntoView({behavior:'smooth', block:'center'});
+        break;
+      }
+    }
+    return;
+  }
+  missingNote.style.display = 'none';
+  computeAndRender();
+});
+
+function computeAndRender(){
+  const scores = {};
+  let maxScore = 0;
+  for(const [gift, items] of Object.entries(giftMap)){
+    let total = 0;
+    items.forEach(n => {
+      const val = document.querySelector(`input[name=q${n}]:checked`);
+      total += val ? parseInt(val.value, 10) : 0;
+    });
+    scores[gift] = total;
+    if(total > maxScore) maxScore = total;
+  }
+
+  // sort for top-gift cards
+  const sorted = Object.entries(scores).sort((a,b) => b[1]-a[1]);
+  const topScore = sorted[0][1];
+  const topGiftsEl = document.getElementById('topGifts');
+  topGiftsEl.innerHTML = '';
+  sorted.filter(([,v]) => v === topScore).concat(sorted.filter(([,v]) => v !== topScore).slice(0, Math.max(0,3-sorted.filter(([,v])=>v===topScore).length)))
+    .slice(0,4)
+    .forEach(([gift, val], idx) => {
+      const card = document.createElement('div');
+      card.className = 'top-gift-card';
+      card.innerHTML = `<div class="rank">${idx===0 ? 'Strongest' : 'Also strong'}</div>
+        <div class="name">${gift}</div>
+        <div class="score">${val} / 25</div>`;
+      topGiftsEl.appendChild(card);
+    });
+
+  // chart bars — keep original 16-gift order like the PDF
+  const order = Object.keys(giftMap);
+  const chartBars = document.getElementById('chartBars');
+  chartBars.innerHTML = '';
+  order.forEach(gift => {
+    const val = scores[gift];
+    const pct = (val/25*100).toFixed(1);
+    const row = document.createElement('div');
+    row.className = 'bar-row';
+    row.innerHTML = `
+      <div class="label">${gift}</div>
+      <div class="bar-track">
+        <div class="bar-fill ${val===topScore ? 'top':''}" style="width:0%" data-target="${pct}">
+          <span class="val">${val}</span>
+        </div>
+      </div>
+    `;
+    chartBars.appendChild(row);
+  });
+
+  document.getElementById('results').style.display = 'block';
+  document.getElementById('results').scrollIntoView({behavior:'smooth', block:'start'});
+
+  // animate bars after paint
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      document.querySelectorAll('.bar-fill').forEach(el => {
+        el.style.width = el.dataset.target + '%';
+      });
+    }, 60);
+  });
+}
+
+document.getElementById('retakeBtn').addEventListener('click', () => {
+  document.getElementById('surveyForm').reset();
+  document.querySelectorAll('.q.answered').forEach(el => el.classList.remove('answered'));
+  document.getElementById('results').style.display = 'none';
+  updateProgress();
+  window.scrollTo({top:0, behavior:'smooth'});
+});
+
+document.getElementById('printBtn').addEventListener('click', () => window.print());
+
+updateProgress();
+</script>
+</body>
+</html>
