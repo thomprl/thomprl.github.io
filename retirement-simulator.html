@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Retirement Simulator</title>
+<style>
+  :root { --navy:#1B2A4A; --teal:#0F6E63; --amber:#C08A2E; --rust:#B5533C; --slate:#7C8798; --paper:#FAF8F2; --card:#FFFFFF; --line:#E4DFD1; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--paper); color:var(--navy); font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Arial, sans-serif; }
+  .serif { font-family: Georgia, 'Times New Roman', serif; }
+  header.top { background:var(--navy); color:var(--paper); padding:18px 20px; }
+  header.top .eyebrow { font-size:11px; letter-spacing:.2em; text-transform:uppercase; color:#9FB3C8; margin-bottom:4px; }
+  header.top h1 { font-size:24px; margin:0; }
+  header.top p { font-size:13px; color:#C7D2DE; margin:4px 0 0; }
+  .toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:12px; padding:12px 20px; background:#FBF3E3; border-bottom:2px solid var(--amber); }
+  .toolbar .label { font-size:12px; font-weight:600; color:#7A5A1E; text-transform:uppercase; letter-spacing:.05em; }
+  .btn { display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:600; padding:9px 16px; border-radius:6px; cursor:pointer; text-decoration:none; border:2px solid transparent; }
+  .btn-save { background:var(--teal); color:white; }
+  .btn-save:hover { background:#0C5A51; }
+  .btn-load { background:white; border-color:var(--teal); color:var(--teal); }
+  .btn-load:hover { background:#EAF4F2; }
+  #loadMsg { font-size:12px; font-weight:600; color:#7A5A1E; }
+  .layout { display:grid; grid-template-columns: 1fr; }
+  @media (min-width: 1024px) { .layout { grid-template-columns: 390px 1fr; } #inputs { border-right:1px solid var(--line); max-height:calc(100vh - 110px); overflow-y:auto; } #results { max-height:calc(100vh - 110px); overflow-y:auto; } }
+  #inputs, #results { padding:16px; }
+  .section { border:1px solid var(--line); border-radius:8px; background:rgba(255,255,255,.7); margin-bottom:12px; overflow:hidden; }
+  .section-header { width:100%; display:flex; align-items:center; justify-content:space-between; padding:11px 14px; background:#F6F3EA; border:none; cursor:pointer; font-size:15px; font-weight:600; color:var(--navy); font-family: Georgia, serif; }
+  .section-header .chev { color:#94a3b8; font-size:12px; }
+  .section-content { padding:14px; }
+  .subhead { display:flex; align-items:center; gap:6px; font-size:13px; color:#475569; margin:12px 0 4px; font-weight:600; }
+  .field-label { font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:#94a3b8; display:block; margin-bottom:4px; }
+  .text-input { width:100%; padding:7px 9px; font-size:13px; border:1px solid #D8D2C0; border-radius:5px; background:white; margin-bottom:12px; }
+  .slider-row { margin-bottom:14px; }
+  .slider-label-row { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px; }
+  .slider-label-row label { font-size:13px; font-weight:500; color:#475569; }
+  .slider-value { font-family: ui-monospace, monospace; font-size:12px; color:var(--teal); font-weight:600; }
+  .slider-controls { display:flex; align-items:center; gap:8px; }
+  .slider-controls input[type=range] { flex:1; accent-color:var(--teal); height:5px; cursor:pointer; }
+  .slider-controls input[type=number] { width:82px; font-family: ui-monospace, monospace; font-size:12px; border:1px solid #D8D2C0; border-radius:5px; padding:5px 6px; background:white; }
+  .slider-hint { font-size:11px; color:#94a3b8; margin-top:3px; }
+  .checkbox-row { display:flex; align-items:center; gap:7px; font-size:13px; color:#475569; margin:10px 0 6px; cursor:pointer; }
+  .checkbox-row input { accent-color:var(--teal); width:15px; height:15px; }
+  .btn-group { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
+  .chip { font-size:12px; padding:6px 12px; border-radius:5px; border:1px solid #D8D2C0; background:white; color:#475569; cursor:pointer; }
+  .chip.active { background:var(--teal); border-color:var(--teal); color:white; }
+  .chip.amber.active { background:var(--amber); border-color:var(--amber); }
+  .cards { display:grid; grid-template-columns:repeat(3, 1fr); gap:12px; margin-bottom:18px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:12px; }
+  .card .k { font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:#94a3b8; margin-bottom:4px; }
+  .card .v { font-family: Georgia, serif; font-size:20px; }
+  .card .sub { font-size:11px; color:#94a3b8; margin-top:2px; }
+  .card .sub.warn { color:var(--rust); }
+  .card .sub.good { color:var(--teal); }
+  .panel { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:12px; margin-bottom:18px; }
+  .panel-title { font-family: Georgia, serif; font-size:15px; margin-bottom:8px; }
+  .panel-title .note { color:#94a3b8; font-size:12px; font-family: ui-sans-serif, system-ui; font-weight:normal; }
+  table.ledger { width:100%; border-collapse:collapse; font-family: ui-monospace, monospace; font-size:12px; }
+  table.ledger thead th { position:sticky; top:0; background:#F6F3EA; color:#64748b; text-align:right; padding:6px 8px; }
+  table.ledger thead th:nth-child(1), table.ledger thead th:nth-child(2) { text-align:left; }
+  table.ledger td { padding:4px 8px; text-align:right; border-top:1px solid #F1EDE0; }
+  table.ledger td:nth-child(1), table.ledger td:nth-child(2) { text-align:left; }
+  .ledger-wrap { max-height:420px; overflow:auto; border:1px solid #EEE9DB; border-radius:6px; }
+  .row-short { background:#FBEAE5; }
+  .row-first { background:#F6F3EA; }
+  .col-rmd { color:var(--amber); }
+  .col-conv { color:var(--teal); }
+  .col-espp { color:#8A5FB5; }
+  .col-growth { color:#0F6E63; }
+  .col-total { font-weight:700; color:var(--navy); }
+  .footnote { font-size:11px; color:#94a3b8; line-height:1.6; padding-bottom:24px; }
+  .legend { display:flex; flex-wrap:wrap; gap:12px; font-size:11px; color:#475569; margin-top:6px; }
+  .legend span.sw { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:4px; vertical-align:middle; }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="eyebrow">Retirement Ledger</div>
+  <h1 class="serif">Retirement Simulator</h1>
+  <p>Two-person household plan — runs entirely in this browser tab, nothing is sent anywhere.</p>
+</header>
+
+<div class="toolbar">
+  <span class="label">Your plan:</span>
+  <a id="saveLink" class="btn btn-save" download="retirement-plan.json" href="#">⬇ Save plan (.json)</a>
+  <button id="loadBtn" type="button" class="btn btn-load">⬆ Load plan (.json)</button>
+  <input id="fileInput" type="file" accept="application/json" style="display:none">
+  <span id="loadMsg"></span>
+</div>
+
+<div class="layout">
+  <div id="inputs"></div>
+  <div id="results"></div>
+</div>
+
+<script>
+// ---------- Tax + RMD reference data (approximate, 2025-ish, for planning only) ----------
+const BRACKETS = {
+  single: [[0,0.10],[11925,0.12],[48475,0.22],[103350,0.24],[197300,0.32],[250525,0.35],[626350,0.37]],
+  mfj: [[0,0.10],[23850,0.12],[96950,0.22],[206700,0.24],[394600,0.32],[501050,0.35],[751600,0.37]]
+};
+const STD_DEDUCTION = { single: 15000, mfj: 30000 };
+function computeTax(income, filingStatus) {
+  const taxable = Math.max(0, income - STD_DEDUCTION[filingStatus]);
+  const brackets = BRACKETS[filingStatus];
+  let tax = 0;
+  for (let i=0;i<brackets.length;i++){
+    const [start,rate]=brackets[i];
+    const end = i+1<brackets.length ? brackets[i+1][0] : Infinity;
+    if (taxable>start) tax += (Math.min(taxable,end)-start)*rate;
+  }
+  return tax;
+}
+function bracketTop(targetRate, filingStatus) {
+  const brackets = BRACKETS[filingStatus];
+  const idx = brackets.findIndex(b=>b[1]===targetRate);
+  if (idx===-1 || idx+1>=brackets.length) return Infinity;
+  return brackets[idx+1][0] + STD_DEDUCTION[filingStatus];
+}
+const RMD_TABLE = {73:26.5,74:25.5,75:24.6,76:23.7,77:22.9,78:22.0,79:21.1,80:20.2,81:19.4,82:18.5,83:17.7,84:16.8,85:16.0,86:15.2,87:14.4,88:13.7,89:12.9,90:12.2,91:11.5,92:10.8,93:10.1,94:9.5,95:8.9,96:8.4,97:7.8,98:7.3,99:6.8,100:6.4};
+function rmdFactor(age){ if(RMD_TABLE[age]) return RMD_TABLE[age]; if(age>100) return Math.max(1.5,6.4-(age-100)*0.3); return 27.4; }
+
+const fmt0 = n => "$" + Math.round(n).toLocaleString();
+const fmtK = n => { const v=Math.round(n); if(Math.abs(v)>=1000000) return "$"+(v/1000000).toFixed(2)+"M"; if(Math.abs(v)>=1000) return "$"+(v/1000).toFixed(0)+"K"; return "$"+v; };
+
+// ---------- State ----------
+const state = {
+  household: {
+    filingStatus: "mfj", expectedReturn:6, feesPct:0.3, cashRate:2, inflation:2.5,
+    rmdAge:73, enableConversion:true, targetBracket:0.22,
+    livingMonthly:5500, vacationAnnual:7000, vacationTaperAge:80,
+    carMonthly:500, carYearsRemaining:20,
+    healthPreMedicare:1400, healthPostMedicare:550,
+    jointBrokerage:60000, checking:12000, savings:25000, contribBrokerage:3000,
+    planUntilAge:92
+  },
+  person1: {
+    name:"You", currentAge:53, retirementAge:65, trad401k:220000, roth:50000,
+    salary:85000, salaryGrowth:2.5, pctTraditional401k:10, pctRoth401k:5,
+    ssMonthly:2400, ssClaimAge:67,
+    hasPension:false, pensionMonthly:0, pensionStartAge:65, pensionCola:0,
+    hasESPP:true, esppPct:10, esppDiscount:15, esppReturn:8, esppCapGainsRate:15
+  },
+  person2: {
+    name:"Spouse", currentAge:51, retirementAge:63, trad401k:120000, roth:30000,
+    salary:60000, salaryGrowth:2.5, pctTraditional401k:8, pctRoth401k:4,
+    ssMonthly:1800, ssClaimAge:67,
+    hasPension:true, pensionMonthly:1500, pensionStartAge:63, pensionCola:0,
+    hasESPP:false, esppPct:0, esppDiscount:15, esppReturn:8, esppCapGainsRate:15
+  }
+};
+
+// ---------- Simulation ----------
+function simulate(st, returnOffset) {
+  const h = st.household, p1in = st.person1, p2in = st.person2;
+  let p1trad=p1in.trad401k, p1roth=p1in.roth, p2trad=p2in.trad401k, p2roth=p2in.roth;
+  let brok=h.jointBrokerage, cash=h.checking+h.savings;
+  const yearsToRetire1 = Math.max(0, p1in.retirementAge-p1in.currentAge);
+  const yearsToRetire2 = Math.max(0, p2in.retirementAge-p2in.currentAge);
+  const totalYears = Math.max(0, h.planUntilAge - p1in.currentAge);
+  const ageGap = p2in.currentAge - p1in.currentAge;
+  const rows = [];
+  let cumulativeTax=0, cumulativeConversion=0, cumulativeESPP=0, ranOutAge=null;
+
+  rows.push({age1:p1in.currentAge, age2:p2in.currentAge, trad:p1trad+p2trad, roth:p1roth+p2roth, brokerage:brok, cash,
+    total:p1trad+p1roth+p2trad+p2roth+brok+cash, expenses:0, income:0, salary:p1in.salary+p2in.salary, rmd:0, conversion:0, espp:0, tax:0, shortfall:0,
+    growthDollars:null, returnPctApplied:null});
+
+  for (let t=1; t<=totalYears; t++){
+    const age1=p1in.currentAge+t, age2=p2in.currentAge+t;
+    const inflateFactor = Math.pow(1+h.inflation/100, t);
+    const netReturn = (h.expectedReturn+returnOffset-h.feesPct)/100;
+    const investedBefore = p1trad+p2trad+p1roth+p2roth+brok;
+    const cashBefore = cash;
+
+    p1trad*=(1+netReturn); p1roth*=(1+netReturn); p2trad*=(1+netReturn); p2roth*=(1+netReturn);
+    brok*=(1+netReturn); cash*=(1+h.cashRate/100);
+
+    const investedAfterGrowth = p1trad+p2trad+p1roth+p2roth+brok;
+    const growthDollars = (investedAfterGrowth-investedBefore) + (cash-cashBefore);
+    const returnPctApplied = h.expectedReturn+returnOffset-h.feesPct;
+
+    const p1Retired = t>=yearsToRetire1, p2Retired = t>=yearsToRetire2, bothRetired = p1Retired && p2Retired;
+    const salary1 = p1in.salary*Math.pow(1+p1in.salaryGrowth/100, t);
+    const salary2 = p2in.salary*Math.pow(1+p2in.salaryGrowth/100, t);
+    let esppTotal=0, esppOrdinaryGain=0, esppCapGainsTax=0;
+
+    if (!p1Retired){
+      p1trad += salary1*(p1in.pctTraditional401k/100);
+      p1roth += salary1*(p1in.pctRoth401k/100);
+      if (p1in.hasESPP && p1in.esppPct>0){
+        const contrib=salary1*(p1in.esppPct/100);
+        const purchaseValue=contrib/(1-p1in.esppDiscount/100);
+        const heldValue=purchaseValue*(1+((p1in.esppReturn+returnOffset)/100)*0.5);
+        brok+=heldValue; esppTotal+=heldValue; esppOrdinaryGain+=(purchaseValue-contrib);
+        esppCapGainsTax += Math.max(0, heldValue-purchaseValue)*(p1in.esppCapGainsRate/100);
+      }
+    }
+    if (!p2Retired){
+      p2trad += salary2*(p2in.pctTraditional401k/100);
+      p2roth += salary2*(p2in.pctRoth401k/100);
+      if (p2in.hasESPP && p2in.esppPct>0){
+        const contrib=salary2*(p2in.esppPct/100);
+        const purchaseValue=contrib/(1-p2in.esppDiscount/100);
+        const heldValue=purchaseValue*(1+((p2in.esppReturn+returnOffset)/100)*0.5);
+        brok+=heldValue; esppTotal+=heldValue; esppOrdinaryGain+=(purchaseValue-contrib);
+        esppCapGainsTax += Math.max(0, heldValue-purchaseValue)*(p2in.esppCapGainsRate/100);
+      }
+    }
+    cumulativeESPP += esppTotal;
+    if (!bothRetired) brok += h.contribBrokerage;
+
+    const health1 = p1Retired ? (age1<65?h.healthPreMedicare:h.healthPostMedicare)*12*inflateFactor : 0;
+    const health2 = p2Retired ? (age2<65?h.healthPreMedicare:h.healthPostMedicare)*12*inflateFactor : 0;
+    let living=0, vacation=0, car=0;
+    if (bothRetired){
+      living = h.livingMonthly*12*inflateFactor;
+      if (age1<=h.vacationTaperAge) vacation = h.vacationAnnual*inflateFactor;
+      else if (age1<=h.vacationTaperAge+10) vacation = h.vacationAnnual*0.5*inflateFactor;
+      const yearsIntoRetirement = t - Math.max(yearsToRetire1, yearsToRetire2);
+      if (yearsIntoRetirement < h.carYearsRemaining) car = h.carMonthly*12*inflateFactor;
+    }
+    const expenses = health1+health2+living+vacation+car;
+
+    let ss1=0, ss2=0, pension1=0, pension2=0;
+    if (p1Retired && age1>=p1in.ssClaimAge) ss1 = p1in.ssMonthly*12*inflateFactor;
+    if (p2Retired && age2>=p2in.ssClaimAge) ss2 = p2in.ssMonthly*12*inflateFactor;
+    if (p1in.hasPension && p1Retired && age1>=p1in.pensionStartAge) pension1 = p1in.pensionMonthly*12*Math.pow(1+p1in.pensionCola/100, t);
+    if (p2in.hasPension && p2Retired && age2>=p2in.pensionStartAge) pension2 = p2in.pensionMonthly*12*Math.pow(1+p2in.pensionCola/100, t);
+    const income = ss1+ss2+pension1+pension2;
+
+    let need = expenses-income, shortfall=0, fromTrad1=0, fromTrad2=0;
+    if (need>0){
+      const fromCash=Math.min(cash,need); cash-=fromCash; need-=fromCash;
+      const fromBrok=Math.min(brok,need); brok-=fromBrok; need-=fromBrok;
+      const tradTotal=p1trad+p2trad;
+      if (need>0 && tradTotal>0){
+        const take=Math.min(tradTotal,need);
+        fromTrad1=take*(p1trad/tradTotal); fromTrad2=take*(p2trad/tradTotal);
+        p1trad-=fromTrad1; p2trad-=fromTrad2; need-=take;
+      }
+      const rothTotal=p1roth+p2roth;
+      if (need>0 && rothTotal>0){
+        const take=Math.min(rothTotal,need);
+        p1roth-=take*(p1roth/rothTotal); p2roth-=take*(p2roth/rothTotal); need-=take;
+      }
+      shortfall=Math.max(0,need);
+    } else { cash += -need; }
+
+    let rmd1=0, rmd2=0;
+    if (age1>=h.rmdAge && (p1trad+fromTrad1)>0){
+      const basis=p1trad+fromTrad1; const amt=basis/rmdFactor(age1);
+      rmd1=Math.min(Math.max(0,amt-fromTrad1), p1trad); p1trad-=rmd1; brok+=rmd1;
+    }
+    if (age2>=h.rmdAge && (p2trad+fromTrad2)>0){
+      const basis=p2trad+fromTrad2; const amt=basis/rmdFactor(age2);
+      rmd2=Math.min(Math.max(0,amt-fromTrad2), p2trad); p2trad-=rmd2; brok+=rmd2;
+    }
+
+    let conv1=0, conv2=0;
+    let runningIncome = ss1*0.85+ss2*0.85+pension1+pension2+fromTrad1+fromTrad2+rmd1+rmd2+esppOrdinaryGain;
+    const top = bracketTop(h.targetBracket, h.filingStatus);
+    if (h.enableConversion && t>=yearsToRetire1 && age1<h.rmdAge && p1trad>0){
+      const headroom=Math.max(0, top-runningIncome);
+      conv1=Math.min(headroom,p1trad); p1trad-=conv1; p1roth+=conv1; runningIncome+=conv1;
+    }
+    if (h.enableConversion && t>=yearsToRetire2 && age2<h.rmdAge && p2trad>0){
+      const headroom=Math.max(0, top-runningIncome);
+      conv2=Math.min(headroom,p2trad); p2trad-=conv2; p2roth+=conv2; runningIncome+=conv2;
+    }
+    cumulativeConversion += conv1+conv2;
+
+    const tax = computeTax(runningIncome, h.filingStatus) + esppCapGainsTax;
+    let taxRemaining=tax;
+    const taxFromCash=Math.min(cash,taxRemaining); cash-=taxFromCash; taxRemaining-=taxFromCash;
+    const taxFromBrok=Math.min(brok,taxRemaining); brok-=taxFromBrok; taxRemaining-=taxFromBrok;
+    if (taxRemaining>0){
+      const taxFromTrad1=Math.min(p1trad,taxRemaining); p1trad-=taxFromTrad1; taxRemaining-=taxFromTrad1;
+      const taxFromTrad2=Math.min(p2trad,taxRemaining); p2trad-=taxFromTrad2; taxRemaining-=taxFromTrad2;
+    }
+    cumulativeTax += tax;
+    if (shortfall>0 && ranOutAge===null) ranOutAge = age1;
+
+    p1trad=Math.max(0,p1trad); p1roth=Math.max(0,p1roth); p2trad=Math.max(0,p2trad); p2roth=Math.max(0,p2roth);
+    brok=Math.max(0,brok); cash=Math.max(0,cash);
+
+    const salaryPaid1 = !p1Retired ? salary1 : 0;
+    const salaryPaid2 = !p2Retired ? salary2 : 0;
+    rows.push({age1, age2, trad:p1trad+p2trad, roth:p1roth+p2roth, brokerage:brok, cash,
+      total:p1trad+p1roth+p2trad+p2roth+brok+cash, expenses, income, salary:salaryPaid1+salaryPaid2,
+      rmd:rmd1+rmd2, conversion:conv1+conv2, espp:esppTotal, tax, shortfall, growthDollars, returnPctApplied});
+  }
+  return { rows, cumulativeTax, cumulativeConversion, cumulativeESPP, ranOutAge, ageGap, yearsToRetire1, yearsToRetire2 };
+}
+
+// ---------- DOM helpers ----------
+function buildSlider(parent, obj, key, opts){
+  const wrap=document.createElement('div'); wrap.className='slider-row';
+  const labelRow=document.createElement('div'); labelRow.className='slider-label-row';
+  const label=document.createElement('label'); label.textContent=opts.label;
+  const valueSpan=document.createElement('span'); valueSpan.className='slider-value';
+  labelRow.append(label, valueSpan);
+  const controls=document.createElement('div'); controls.className='slider-controls';
+  const range=document.createElement('input'); range.type='range'; range.min=opts.min; range.max=opts.max; range.step=opts.step; range.value=obj[key];
+  const number=document.createElement('input'); number.type='number'; number.step=opts.step; number.value=obj[key];
+  function updateDisplay(){ valueSpan.textContent = opts.format ? opts.format(obj[key]) : obj[key]; }
+  updateDisplay();
+  range.addEventListener('input', ()=>{ obj[key]=parseFloat(range.value); number.value=range.value; updateDisplay(); renderResults(); });
+  number.addEventListener('input', ()=>{ const v=parseFloat(number.value); if(!isNaN(v)){ obj[key]=v; range.value=v; updateDisplay(); renderResults(); } });
+  controls.append(range, number); wrap.append(labelRow, controls);
+  if (opts.hint){ const hint=document.createElement('div'); hint.className='slider-hint'; hint.textContent=opts.hint; wrap.append(hint); }
+  parent.append(wrap);
+}
+function buildTextInput(parent, obj, key, labelText, onInput){
+  const label=document.createElement('label'); label.className='field-label'; label.textContent=labelText;
+  const input=document.createElement('input'); input.type='text'; input.className='text-input'; input.value=obj[key];
+  input.addEventListener('input', ()=>{ obj[key]=input.value; if(onInput) onInput(); renderResults(); });
+  parent.append(label, input);
+}
+function buildCheckbox(parent, obj, key, labelText, onToggle){
+  const label=document.createElement('label'); label.className='checkbox-row';
+  const input=document.createElement('input'); input.type='checkbox'; input.checked=obj[key];
+  input.addEventListener('change', ()=>{ obj[key]=input.checked; if(onToggle) onToggle(input.checked); renderResults(); });
+  label.append(input, document.createTextNode(labelText));
+  parent.append(label);
+  return input;
+}
+function buildButtonGroup(parent, obj, key, options, amber){
+  const wrap=document.createElement('div'); wrap.className='btn-group';
+  function refresh(){ [...wrap.children].forEach(btn=>btn.classList.toggle('active', parseFloat(btn.dataset.val)===obj[key] || btn.dataset.val===String(obj[key]))); }
+  options.forEach(opt=>{
+    const btn=document.createElement('button'); btn.type='button'; btn.className='chip'+(amber?' amber':''); btn.textContent=opt.label; btn.dataset.val=opt.value;
+    btn.addEventListener('click', ()=>{ obj[key]=opt.value; refresh(); renderResults(); });
+    wrap.append(btn);
+  });
+  refresh();
+  parent.append(wrap);
+  return refresh;
+}
+function buildSection(parent, titleText, defaultOpen){
+  const section=document.createElement('div'); section.className='section';
+  const header=document.createElement('button'); header.type='button'; header.className='section-header';
+  const titleSpan=document.createElement('span'); titleSpan.className='serif'; titleSpan.textContent=titleText;
+  const chev=document.createElement('span'); chev.className='chev'; chev.textContent='▾';
+  header.append(titleSpan, chev);
+  const content=document.createElement('div'); content.className='section-content';
+  content.style.display = defaultOpen ? 'block' : 'none';
+  chev.textContent = defaultOpen ? '▾' : '▸';
+  header.addEventListener('click', ()=>{
+    const isOpen = content.style.display !== 'none';
+    content.style.display = isOpen ? 'none' : 'block';
+    chev.textContent = isOpen ? '▸' : '▾';
+  });
+  section.append(header, content);
+  parent.append(section);
+  return content;
+}
+
+function buildPersonSection(parent, person, defaultOpen){
+  const content = buildSection(parent, person.name, defaultOpen);
+  buildTextInput(content, person, 'name', 'Name', ()=>{ /* label stays static in UI until rebuild; fine for now */ });
+  buildSlider(content, person, 'currentAge', {label:'Current age', min:30, max:85, step:1});
+  buildSlider(content, person, 'retirementAge', {label:'Retirement age', min:person.currentAge, max:80, step:1});
+
+  const s1=document.createElement('div'); s1.className='subhead'; s1.textContent='Salary & contributions'; content.append(s1);
+  buildSlider(content, person, 'salary', {label:'Current annual salary', min:0, max:500000, step:1000, format:fmtK});
+  buildSlider(content, person, 'salaryGrowth', {label:'Expected annual raise', min:0, max:10, step:0.25, format:v=>v+'%'});
+  buildSlider(content, person, 'pctTraditional401k', {label:'% of salary to Traditional 401(k)', min:0, max:50, step:1, format:v=>v+'%'});
+  buildSlider(content, person, 'pctRoth401k', {label:'% of salary to Roth 401(k)', min:0, max:50, step:1, format:v=>v+'%', hint:'IRS elective-deferral limits are not enforced here — check your real cap.'});
+
+  const s2=document.createElement('div'); s2.className='subhead'; s2.textContent="Accounts (this person's own)"; content.append(s2);
+  buildSlider(content, person, 'trad401k', {label:'Traditional 401(k) / IRA balance', min:0, max:5000000, step:5000, format:fmtK});
+  buildSlider(content, person, 'roth', {label:'Roth 401(k) / Roth IRA balance', min:0, max:3000000, step:2500, format:fmtK});
+
+  const s3=document.createElement('div'); s3.className='subhead'; s3.textContent='Social Security'; content.append(s3);
+  buildSlider(content, person, 'ssMonthly', {label:'Estimated monthly benefit', min:0, max:5000, step:50, format:fmt0});
+  buildSlider(content, person, 'ssClaimAge', {label:'Claiming age', min:62, max:70, step:1});
+
+  const pensionSub=document.createElement('div');
+  buildCheckbox(content, person, 'hasPension', 'Has a pension', (checked)=>{ pensionSub.style.display = checked ? 'block':'none'; });
+  content.append(pensionSub);
+  pensionSub.style.display = person.hasPension ? 'block':'none';
+  buildSlider(pensionSub, person, 'pensionMonthly', {label:'Pension / month', min:0, max:8000, step:50, format:fmt0});
+  buildSlider(pensionSub, person, 'pensionStartAge', {label:'Pension start age', min:50, max:75, step:1});
+  buildSlider(pensionSub, person, 'pensionCola', {label:'Pension annual COLA', min:0, max:5, step:0.25, format:v=>v+'%', hint:'0 for a fixed, non-COLA pension'});
+
+  const esppSub=document.createElement('div');
+  buildCheckbox(content, person, 'hasESPP', 'Employee stock purchase plan (ESPP)', (checked)=>{ esppSub.style.display = checked ? 'block':'none'; });
+  content.append(esppSub);
+  esppSub.style.display = person.hasESPP ? 'block':'none';
+  buildSlider(esppSub, person, 'esppPct', {label:'% of salary into ESPP', min:0, max:15, step:0.5, format:v=>v+'%'});
+  buildSlider(esppSub, person, 'esppDiscount', {label:'Purchase discount', min:0, max:15, step:1, format:v=>v+'%', hint:'Applied to the lowest price in the ~6mo offering period'});
+  buildSlider(esppSub, person, 'esppReturn', {label:'Expected annual return on shares', min:-10, max:30, step:1, format:v=>v+'%', hint:"Riskier than the diversified portfolio — it's one stock"});
+  buildSlider(esppSub, person, 'esppCapGainsRate', {label:'Tax rate on holding-period gain', min:0, max:37, step:1, format:v=>v+'%'});
+  const esppNote=document.createElement('div'); esppNote.className='slider-hint';
+  esppNote.textContent='Modeled as one purchase-and-sale cycle per year: contribution → discount applied → ~6 months of holding-period growth → sold and rolled into brokerage. The discount is taxed as ordinary income; the holding-period gain at the rate above. Approximates a plan like 6mo accumulation, buy at a discount off the period low, 6mo hold before selling — not the exact twice-yearly windows.';
+  esppSub.append(esppNote);
+}
+
+function buildInputsPanel(){
+  const root=document.getElementById('inputs');
+  root.innerHTML='';
+  buildPersonSection(root, state.person1, true);
+  buildPersonSection(root, state.person2, false);
+
+  const acct=buildSection(root, 'Household Accounts', false);
+  buildSlider(acct, state.household, 'jointBrokerage', {label:'Joint brokerage (taxable)', min:0, max:2000000, step:2500, format:fmtK});
+  buildSlider(acct, state.household, 'checking', {label:'Checking', min:0, max:200000, step:500, format:fmtK});
+  buildSlider(acct, state.household, 'savings', {label:'Savings', min:0, max:300000, step:1000, format:fmtK});
+  buildSlider(acct, state.household, 'contribBrokerage', {label:'Joint brokerage savings / yr', min:0, max:50000, step:500, format:fmtK});
+
+  const growth=buildSection(root, 'Growth, Fees & Planning Horizon', false);
+  buildSlider(growth, state.household, 'planUntilAge', {label:"Plan until (Person 1's age)", min:state.person1.retirementAge+1, max:105, step:1});
+  buildSlider(growth, state.household, 'expectedReturn', {label:'Expected annual return', min:0, max:12, step:0.25, format:v=>v+'%', hint:'Chart also shows ±2% conservative/optimistic bands'});
+  buildSlider(growth, state.household, 'feesPct', {label:'Account fees / expense ratio', min:0, max:2, step:0.05, format:v=>v+'%'});
+  buildSlider(growth, state.household, 'cashRate', {label:'Cash interest rate', min:0, max:6, step:0.25, format:v=>v+'%'});
+  buildSlider(growth, state.household, 'inflation', {label:'Inflation', min:0, max:6, step:0.25, format:v=>v+'%'});
+  buildButtonGroup(growth, state.household, 'filingStatus', [{value:'single',label:'File single'},{value:'mfj',label:'Married filing jointly'}]);
+
+  const exp=buildSection(root, 'Shared Retirement Expenses', false);
+  const expNote=document.createElement('div'); expNote.className='slider-hint'; expNote.style.marginBottom='10px';
+  expNote.textContent="Living costs, vacations, and the car payment begin once you're both retired. Healthcare starts individually as each of you retires.";
+  exp.append(expNote);
+  buildSlider(exp, state.household, 'livingMonthly', {label:'Base living costs / month', min:1000, max:18000, step:100, format:fmt0});
+  buildSlider(exp, state.household, 'healthPreMedicare', {label:'Healthcare before 65 / month (per person)', min:0, max:3000, step:50, format:fmt0});
+  buildSlider(exp, state.household, 'healthPostMedicare', {label:'Healthcare 65+ / month (per person)', min:0, max:1500, step:25, format:fmt0});
+  const vh=document.createElement('div'); vh.className='subhead'; vh.textContent='✈ Vacations'; exp.append(vh);
+  buildSlider(exp, state.household, 'vacationAnnual', {label:'Annual vacation budget', min:0, max:20000, step:500, format:fmt0});
+  buildSlider(exp, state.household, 'vacationTaperAge', {label:'Full travel budget until age (Person 1)', min:state.person1.retirementAge, max:95, step:1, hint:'Tapers to half for 10 years after this, then stops'});
+  const ch=document.createElement('div'); ch.className='subhead'; ch.textContent='🚗 Car payment'; exp.append(ch);
+  buildSlider(exp, state.household, 'carMonthly', {label:'Monthly car payment', min:0, max:1500, step:25, format:fmt0});
+  buildSlider(exp, state.household, 'carYearsRemaining', {label:'Years of car payments in retirement', min:0, max:30, step:1});
+
+  const rmd=buildSection(root, 'RMDs & Roth Conversions', false);
+  buildSlider(rmd, state.household, 'rmdAge', {label:'RMD start age (each person)', min:72, max:75, step:1, hint:'73 today; 75 for those born 1960+'});
+  const bracketWrap=document.createElement('div');
+  buildCheckbox(rmd, state.household, 'enableConversion', 'Suggest Roth conversions before RMDs begin', (checked)=>{ bracketWrap.style.display = checked ? 'block':'none'; });
+  rmd.append(bracketWrap);
+  bracketWrap.style.display = state.household.enableConversion ? 'block':'none';
+  const bLabel=document.createElement('div'); bLabel.style.fontSize='13px'; bLabel.style.color='#475569'; bLabel.style.marginBottom='4px';
+  bLabel.textContent='Fill up to the top of this household bracket each year:'; bracketWrap.append(bLabel);
+  buildButtonGroup(bracketWrap, state.household, 'targetBracket', [0.10,0.12,0.22,0.24,0.32].map(r=>({value:r,label:(r*100).toFixed(0)+'%'})), true);
+  const bNote=document.createElement('div'); bNote.className='slider-hint'; bNote.style.marginTop='8px';
+  bNote.textContent = `If you're both in your conversion window in the same year, ${state.person1.name}'s converts first, then ${state.person2.name}'s fills any remaining room.`;
+  bracketWrap.append(bNote);
+}
+
+// ---------- SVG chart builders ----------
+function svgEl(tag, attrs){ const e=document.createElementNS('http://www.w3.org/2000/svg', tag); for(const k in attrs) e.setAttribute(k, attrs[k]); return e; }
+
+function buildAreaChart(container, rows, ageGap, retire1Age, retire2Age1Equiv, rmdAge, rmd2Age1Equiv){
+  const W=760, H=300, padL=58, padR=14, padT=14, padB=32;
+  const plotW=W-padL-padR, plotH=H-padT-padB;
+  const minAge=rows[0].age1, maxAge=rows[rows.length-1].age1;
+  const maxTotal=Math.max(1, ...rows.map(r=>r.total))*1.08;
+  const x = age => padL + (age-minAge)/(maxAge-minAge||1)*plotW;
+  const y = v => padT + plotH - (v/maxTotal)*plotH;
+
+  const svg=svgEl('svg',{viewBox:`0 0 ${W} ${H}`, width:'100%', height:H, style:'display:block'});
+
+  // gridlines + y labels
+  for (let i=0;i<=4;i++){
+    const v=maxTotal*i/4; const yy=y(v);
+    svg.append(svgEl('line',{x1:padL,x2:W-padR,y1:yy,y2:yy,stroke:'#EEE9DB','stroke-dasharray':'2 4'}));
+    const t=svgEl('text',{x:padL-6,y:yy+4,'font-size':10,fill:'#94a3b8','text-anchor':'end'}); t.textContent=fmtK(v); svg.append(t);
+  }
+  // x labels
+  const xTicks=6;
+  for (let i=0;i<=xTicks;i++){
+    const age=Math.round(minAge+(maxAge-minAge)*i/xTicks); const xx=x(age);
+    const t=svgEl('text',{x:xx,y:H-10,'font-size':10,fill:'#94a3b8','text-anchor':'middle'}); t.textContent=age; svg.append(t);
+  }
+
+  const keys=['trad','roth','brokerage','cash'];
+  const colors={trad:'#1B2A4A',roth:'#0F6E63',brokerage:'#C08A2E',cash:'#7C8798'};
+  let cumPrev = rows.map(()=>0);
+  keys.forEach(k=>{
+    const cumNext = rows.map((r,i)=>cumPrev[i]+r[k]);
+    let d = '';
+    rows.forEach((r,i)=>{ d += (i===0?'M':'L') + x(r.age1) + ',' + y(cumNext[i]) + ' '; });
+    for (let i=rows.length-1;i>=0;i--){ d += 'L' + x(rows[i].age1) + ',' + y(cumPrev[i]) + ' '; }
+    d += 'Z';
+    svg.append(svgEl('path',{d, fill:colors[k], 'fill-opacity':0.85, stroke:colors[k], 'stroke-width':1}));
+    cumPrev = cumNext;
+  });
+
+  function refLine(age, color, label, dash){
+    if (age<minAge || age>maxAge) return;
+    const xx=x(age);
+    svg.append(svgEl('line',{x1:xx,x2:xx,y1:padT,y2:H-padB,stroke:color,'stroke-dasharray':dash||'3 3'}));
+    const t=svgEl('text',{x:xx+3,y:padT+9,'font-size':9,fill:color}); t.textContent=label; svg.append(t);
+  }
+  refLine(retire1Age, '#B5533C', state.person1.name+' retires');
+  refLine(retire2Age1Equiv, '#8A5FB5', state.person2.name+' retires');
+  refLine(rmdAge, '#C08A2E', state.person1.name+' RMDs');
+  refLine(rmd2Age1Equiv, '#C08A2E', state.person2.name+' RMDs', '1 3');
+
+  container.innerHTML='';
+  container.append(svg);
+
+  const legend=document.createElement('div'); legend.className='legend';
+  const items=[['Traditional 401k/IRA (both)',colors.trad],['Roth (both)',colors.roth],['Brokerage (incl. ESPP)',colors.brokerage],['Cash',colors.cash]];
+  items.forEach(([label,color])=>{ const s=document.createElement('span'); s.innerHTML=`<span class="sw" style="background:${color}"></span>${label}`; legend.append(s); });
+  container.append(legend);
+}
+
+function buildLineChart(container, rows){
+  const W=760, H=260, padL=58, padR=14, padT=14, padB=32;
+  const plotW=W-padL-padR, plotH=H-padT-padB;
+  const minAge=rows[0].age1, maxAge=rows[rows.length-1].age1;
+  const maxV=Math.max(1, ...rows.map(r=>Math.max(r.expected,r.conservative,r.optimistic)))*1.08;
+  const x = age => padL + (age-minAge)/(maxAge-minAge||1)*plotW;
+  const y = v => padT + plotH - (v/maxV)*plotH;
+  const svg=svgEl('svg',{viewBox:`0 0 ${W} ${H}`, width:'100%', height:H, style:'display:block'});
+  for (let i=0;i<=4;i++){
+    const v=maxV*i/4; const yy=y(v);
+    svg.append(svgEl('line',{x1:padL,x2:W-padR,y1:yy,y2:yy,stroke:'#EEE9DB','stroke-dasharray':'2 4'}));
+    const t=svgEl('text',{x:padL-6,y:yy+4,'font-size':10,fill:'#94a3b8','text-anchor':'end'}); t.textContent=fmtK(v); svg.append(t);
+  }
+  const xTicks=6;
+  for (let i=0;i<=xTicks;i++){
+    const age=Math.round(minAge+(maxAge-minAge)*i/xTicks); const xx=x(age);
+    const t=svgEl('text',{x:xx,y:H-10,'font-size':10,fill:'#94a3b8','text-anchor':'middle'}); t.textContent=age; svg.append(t);
+  }
+  function line(key,color,width){
+    let d=''; rows.forEach((r,i)=>{ d += (i===0?'M':'L') + x(r.age1) + ',' + y(r[key]) + ' '; });
+    svg.append(svgEl('path',{d, fill:'none', stroke:color, 'stroke-width':width}));
+  }
+  line('optimistic','#0F6E63',1.5); line('expected','#1B2A4A',2.5); line('conservative','#B5533C',1.5);
+  container.innerHTML=''; container.append(svg);
+  const legend=document.createElement('div'); legend.className='legend';
+  [['Optimistic (+2%)','#0F6E63'],['Expected','#1B2A4A'],['Conservative (-2%)','#B5533C']].forEach(([label,color])=>{
+    const s=document.createElement('span'); s.innerHTML=`<span class="sw" style="background:${color}"></span>${label}`; legend.append(s);
+  });
+  container.append(legend);
+}
+
+// ---------- Results ----------
+function renderResults(){
+  const expected = simulate(state, 0);
+  const conservative = simulate(state, -2);
+  const optimistic = simulate(state, 2);
+  const comparisonRows = expected.rows.map((r,i)=>({age1:r.age1, expected:r.total, conservative:conservative.rows[i].total, optimistic:optimistic.rows[i].total}));
+  const endBalance = expected.rows[expected.rows.length-1]?.total || 0;
+  const p2RmdAge1Equivalent = state.household.rmdAge - expected.ageGap;
+  const retire2Age1Equiv = state.person2.currentAge + expected.yearsToRetire2 - expected.ageGap;
+
+  updateSaveLink();
+
+  const root=document.getElementById('results');
+  root.innerHTML='';
+
+  const cards=document.createElement('div'); cards.className='cards';
+  cards.innerHTML = `
+    <div class="card"><div class="k">Money lasts until</div>
+      <div class="v">${expected.ranOutAge ? state.person1.name+' age '+expected.ranOutAge : state.household.planUntilAge+'+'}</div>
+      <div class="sub ${expected.ranOutAge?'warn':'good'}">${expected.ranOutAge ? 'runs short in expected scenario' : 'Lasts through your plan'}</div></div>
+    <div class="card"><div class="k">Ending balance</div><div class="v">${fmtK(endBalance)}</div><div class="sub">at plan end, expected scenario</div></div>
+    <div class="card"><div class="k">Lifetime taxes</div><div class="v">${fmtK(expected.cumulativeTax)}</div>
+      <div class="sub">${fmtK(expected.cumulativeConversion)} converted · ${fmtK(expected.cumulativeESPP)} ESPP proceeds</div></div>
+  `;
+  root.append(cards);
+
+  const chartPanel=document.createElement('div'); chartPanel.className='panel';
+  chartPanel.innerHTML = `<div class="panel-title serif">Account balances by age <span class="note">(expected return scenario · x-axis is ${state.person1.name}'s age)</span></div>`;
+  const chartDiv=document.createElement('div'); chartPanel.append(chartDiv); root.append(chartPanel);
+  buildAreaChart(chartDiv, expected.rows, expected.ageGap,
+    state.person1.currentAge+expected.yearsToRetire1, retire2Age1Equiv, state.household.rmdAge, p2RmdAge1Equivalent);
+
+  const linePanel=document.createElement('div'); linePanel.className='panel';
+  linePanel.innerHTML = `<div class="panel-title serif">Total net worth — return scenarios</div>`;
+  const lineDiv=document.createElement('div'); linePanel.append(lineDiv); root.append(linePanel);
+  buildLineChart(lineDiv, comparisonRows);
+
+  const tablePanel=document.createElement('div'); tablePanel.className='panel';
+  tablePanel.innerHTML = `<div class="panel-title serif">Year-by-year ledger <span class="note">(expected return scenario)</span></div>`;
+  const wrap=document.createElement('div'); wrap.className='ledger-wrap';
+  const table=document.createElement('table'); table.className='ledger';
+  table.innerHTML = `<thead><tr><th>${state.person1.name}</th><th>${state.person2.name}</th><th>Return</th><th>Growth $</th><th>Salary</th><th>Retirement Income</th><th>Expenses</th><th>RMD</th><th>Roth Conv.</th><th>ESPP</th><th>Tax</th><th>Total</th></tr></thead>`;
+  const tbody=document.createElement('tbody');
+  expected.rows.forEach((r,i)=>{
+    const tr=document.createElement('tr');
+    tr.className = (r.shortfall>0?'row-short ':'') + (i===0?'row-first':'');
+    tr.innerHTML = `<td>${r.age1}${i===0?' (today)':''}</td><td>${r.age2}</td>
+      <td>${r.returnPctApplied!==null? r.returnPctApplied.toFixed(2)+'%':'—'}</td>
+      <td class="col-growth">${r.growthDollars!==null? (r.growthDollars>=0?'+':'')+fmt0(r.growthDollars):'—'}</td>
+      <td>${r.salary>0?fmt0(r.salary):'—'}</td>
+      <td>${r.income>0?fmt0(r.income):'—'}</td><td>${r.expenses>0?fmt0(r.expenses):'—'}</td>
+      <td class="col-rmd">${r.rmd>0?fmt0(r.rmd):'—'}</td><td class="col-conv">${r.conversion>0?fmt0(r.conversion):'—'}</td>
+      <td class="col-espp">${r.espp>0?fmt0(r.espp):'—'}</td><td>${r.tax>0?fmt0(r.tax):'—'}</td>
+      <td class="col-total">${fmtK(r.total)}</td>`;
+    tbody.append(tr);
+  });
+  table.append(tbody); wrap.append(table); tablePanel.append(wrap);
+  const note=document.createElement('div'); note.className='slider-hint'; note.style.marginTop='8px';
+  note.textContent='Top row is today, exactly as entered. Rows shaded rust ran short of cash that year.';
+  tablePanel.append(note);
+  root.append(tablePanel);
+
+  const footer=document.createElement('div'); footer.className='footnote';
+  footer.textContent = "The Salary column is combined household salary while working — it drives your 401(k)/Roth/ESPP contributions automatically but isn't otherwise spent or taxed here, since day-to-day living costs before retirement are assumed to come out of that paycheck rather than your accounts. \"Retirement Income\" (Social Security + pension) is what actually funds withdrawals once you're retired. Educational planning estimate, not tax or financial advice. Uses simplified, rounded tax brackets, a flat 85% Social Security taxability assumption, per-person RMDs based on the IRS Uniform Lifetime Table, and fixed (non-random) return scenarios rather than a full Monte Carlo simulation. Shared living/vacation/car costs assume the working spouse's income covers the household until you're both retired — Social Security and pensions are counted once each person has individually retired and reached their own claim/start age. The ESPP is modeled as one annual discount-purchase-and-sale cycle, not the exact twice-yearly offering windows, and its holding-period gain is taxed at a flat rate you set rather than run through the progressive brackets. Roth conversion suggestions fill a target bracket; they aren't a filed tax calculation. Talk to a CPA or fee-only fiduciary advisor before acting on conversions or withdrawal timing. This page runs entirely in your browser — nothing you enter is sent anywhere. Use \"Save plan\" to download your numbers as a JSON file, and \"Load plan\" to bring them back.";
+  root.append(footer);
+}
+
+function updateSaveLink(){
+  const payload = { version:2, household: state.household, person1: state.person1, person2: state.person2 };
+  const json = JSON.stringify(payload, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.getElementById('saveLink');
+  if (link.dataset.prevUrl) URL.revokeObjectURL(link.dataset.prevUrl);
+  link.href = url;
+  link.dataset.prevUrl = url;
+}
+
+function showLoadMsg(msg){
+  const el=document.getElementById('loadMsg'); el.textContent=msg;
+  setTimeout(()=>{ el.textContent=''; }, 4000);
+}
+
+document.getElementById('loadBtn').addEventListener('click', ()=>{ document.getElementById('fileInput').click(); });
+document.getElementById('fileInput').addEventListener('change', (e)=>{
+  const file=e.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=(ev)=>{
+    try{
+      const parsed=JSON.parse(ev.target.result);
+      if (parsed.household) Object.assign(state.household, parsed.household);
+      if (parsed.person1) Object.assign(state.person1, parsed.person1);
+      if (parsed.person2) Object.assign(state.person2, parsed.person2);
+      buildInputsPanel();
+      renderResults();
+      showLoadMsg('Plan loaded.');
+    } catch(err){ showLoadMsg("Couldn't read that file — is it a plan JSON exported from this tool?"); }
+  };
+  reader.readAsText(file);
+  e.target.value='';
+});
+
+buildInputsPanel();
+renderResults();
+</script>
+</body>
+</html>
