@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<title>Tennis Score</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: #1c1c1e; color: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+    touch-action: manipulation; -webkit-user-select: none; user-select: none;
+  }
+
+  /* ===== Watch hardware (screen = 198 x 242 points, a 45mm Apple Watch) ===== */
+  .stage { position: relative; }
+  .watch { position: absolute; top: 0; left: 0; width: 250px; height: 290px; transform-origin: top left; }
+  .band { position: absolute; left: 62px; width: 110px; height: 40px; background: #2C2C2A; }
+  .band.top { top: -6px; border-radius: 14px 14px 0 0; }
+  .band.bot { bottom: -6px; border-radius: 0 0 14px 14px; }
+  .case { position: absolute; top: 12px; left: 6px; width: 222px; height: 266px; background: #3a3a3c;
+          border-radius: 52px; padding: 12px; }
+  .crown { position: absolute; top: 72px; left: 226px; width: 12px; height: 42px; background: #5F5E5A;
+           border-radius: 5px; cursor: pointer; }
+  .crown:active { background: #888780; }
+  .sidebtn { position: absolute; top: 140px; left: 227px; width: 7px; height: 50px; background: #5F5E5A; border-radius: 3px; }
+  .screen { position: relative; width: 198px; height: 242px; border-radius: 40px; background: #000; overflow: hidden; }
+
+  /* ===== Pages ===== */
+  .pager { position: absolute; inset: 0; display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; }
+  .pager::-webkit-scrollbar { display: none; }
+  .page { position: relative; flex: 0 0 100%; scroll-snap-align: start; display: flex; flex-direction: column; padding: 8px 9px 14px; }
+  .dots { position: absolute; bottom: 4px; left: 0; right: 0; display: flex; justify-content: center; gap: 5px; pointer-events: none; }
+  .dots span { width: 5px; height: 5px; border-radius: 50%; background: #444441; }
+  .dots span.on { background: #fff; }
+
+  /* ===== Score page ===== */
+  .topbar { display: flex; justify-content: space-between; align-items: center; height: 26px; padding: 0 10px; margin-bottom: 3px; }
+  .ib { width: 26px; height: 26px; border-radius: 50%; background: #2C2C2A; color: #fff; border: none;
+        display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer; padding: 0; }
+  .ib:active { background: #444441; }
+  .halves { position: relative; flex: 1; display: flex; flex-direction: column; gap: 4px; }
+  .half { flex: 1; border-radius: 16px; padding: 4px 12px; cursor: pointer;
+          display: flex; justify-content: space-between; align-items: center; transition: transform .08s; }
+  .half:active { transform: scale(.96); }
+  .pl { font-size: 12px; line-height: 1.35; }
+  .gs { font-size: 11px; opacity: .85; }
+  .score { font-size: 32px; font-weight: 600; }
+  .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #EF9F27; margin-left: 4px; vertical-align: 1px; }
+  #pill { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); white-space: nowrap;
+          background: #FAC775; color: #412402; font-size: 11px; font-weight: 600; padding: 2px 10px; border-radius: 10px; visibility: hidden; }
+  #toast { position: absolute; left: 14px; right: 14px; bottom: 16px; height: 24px; background: #2C2C2A; border-radius: 12px;
+           display: flex; align-items: center; justify-content: space-between; padding: 0 10px; font-size: 11px; visibility: hidden; }
+  #tund { color: #EF9F27; cursor: pointer; font-weight: 600; padding: 4px 0 4px 8px; }
+
+  /* ===== Shared small UI ===== */
+  .h { font-size: 14px; font-weight: 600; margin: 4px 0 8px 8px; }
+  .ub { background: #2C2C2A; color: #fff; border: none; border-radius: 14px; padding: 7px 10px; font-size: 12px; cursor: pointer; font-family: inherit; }
+  .ub:active { background: #444441; }
+  .big { width: 100%; margin-bottom: 6px; text-align: left; padding: 9px 12px; }
+  .big i { margin-right: 6px; }
+  .lbl { color: #B4B2A9; font-size: 11px; margin: 8px 0 4px; }
+  .muted { color: #B4B2A9; }
+  .teamA { color: #9FE1CB; }
+  .teamB { color: #F5C4B3; }
+  .bx td, .bx th { padding: 3px 4px; text-align: center; font-weight: 400; font-size: 12px; }
+  .ov { position: absolute; inset: 0; background: #000; padding: 12px 12px 14px; display: none; flex-direction: column; font-size: 12px; z-index: 5; }
+  .scroll { flex: 1; overflow-y: auto; padding: 0 2px; }
+  .sb { background: #2C2C2A; border-radius: 50%; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; font-weight: 600; font-size: 15px; }
+  .sb:active { background: #444441; }
+  .seg { display: flex; background: #2C2C2A; border-radius: 8px; padding: 2px; }
+  .seg span { flex: 1; text-align: center; padding: 5px 2px; border-radius: 6px; cursor: pointer; font-size: 11px; }
+  .seg span.on { background: #0F6E56; }
+  .inp { width: 100%; background: #2C2C2A; border: 1px solid transparent; color: #fff; border-radius: 8px;
+         padding: 4px 10px; font-size: 16px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;
+         font-family: inherit; -webkit-user-select: text; user-select: text; outline: none; }
+  .inp:focus { border-color: #5DCAA5; }
+  .inp.err { border-color: #E24B4A; }
+  .chips { display: flex; flex-wrap: wrap; gap: 4px; }
+  .chip { background: #2C2C2A; border-radius: 10px; padding: 4px 9px; cursor: pointer; font-size: 11px; }
+  .chip.on { background: #EF9F27; color: #412402; font-weight: 600; }
+  #serr { color: #F09595; font-size: 11px; min-height: 14px; margin: 4px 0 2px; text-align: center; }
+
+  /* ===== Controls under the watch (phone/desktop only) ===== */
+  .ctl { display: flex; background: #2C2C2A; border-radius: 10px; padding: 3px; font-size: 14px; }
+  .ctl span { padding: 7px 14px; border-radius: 8px; cursor: pointer; }
+  .ctl span.on { background: #444441; }
+  .hint { color: #888780; font-size: 13px; text-align: center; line-height: 1.6; max-width: 320px; padding: 0 16px; }
+</style>
+</head>
+<body>
+
+<div class="stage" id="stage">
+  <div class="watch" id="watch">
+    <div class="band top"></div><div class="band bot"></div>
+    <div class="crown" id="crown" title="Digital Crown: undo"></div>
+    <div class="sidebtn"></div>
+    <div class="case">
+      <div class="screen">
+        <div class="pager" id="pager">
+
+          <!-- Page 1: Score -->
+          <div class="page" style="padding-top:6px">
+            <div class="topbar">
+              <button class="ib" id="undo" aria-label="Undo"><i class="ti ti-arrow-back-up"></i></button>
+              <span id="info" class="muted" style="font-size:11px;">Set 1</span>
+              <button class="ib" id="reset" aria-label="New match"><i class="ti ti-refresh"></i></button>
+            </div>
+            <div class="halves">
+              <div class="half" id="h0" style="background:#085041;">
+                <div class="teamA"><div class="pl" id="n0"></div><div class="gs" id="gs0"></div></div>
+                <div class="score" id="p0">0</div>
+              </div>
+              <div class="half" id="h1" style="background:#712B13;">
+                <div class="teamB"><div class="pl" id="n1"></div><div class="gs" id="gs1"></div></div>
+                <div class="score" id="p1">0</div>
+              </div>
+              <span id="pill"></span>
+            </div>
+            <div id="toast"><span id="tmsg"></span><span id="tund">Undo</span></div>
+          </div>
+
+          <!-- Page 2: Box score -->
+          <div class="page" id="boxpage"></div>
+
+          <!-- Page 3: Menu -->
+          <div class="page">
+            <div class="h">Menu</div>
+            <button class="ub big" id="mUndo"><i class="ti ti-arrow-back-up"></i>Undo point</button>
+            <button class="ub big" id="mEdit"><i class="ti ti-edit"></i>Edit score</button>
+            <button class="ub big" id="mNew"><i class="ti ti-refresh"></i>New match</button>
+            <div class="muted" id="settings" style="font-size:11px;line-height:1.5;margin:4px 6px 0"></div>
+          </div>
+        </div>
+        <div class="dots" id="dots"><span class="on"></span><span></span><span></span></div>
+        <div class="ov" id="ov"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="ctl" id="sizectl"><span data-z="1" class="on">Actual size</span><span data-z="fit">Zoom</span></div>
+<div class="hint">Swipe left or right on the watch face. Tap the crown on the side to undo.</div>
+
+<script>
+// ================= Watch sizing =================
+// A 45mm watch screen is 198 x 242 points. On an iPhone, 1 CSS pixel is very close
+// to 1 watch point physically, so "Actual size" is roughly the real footprint.
+const W = 250, H = 290;
+let zoomMode = '1';
+function fitWatch() {
+  const z = zoomMode === 'fit' ? Math.max(1, Math.min((innerWidth - 32) / W, (innerHeight - 150) / H)) : 1;
+  document.getElementById('watch').style.transform = `scale(${z})`;
+  const s = document.getElementById('stage');
+  s.style.width = W * z + 'px'; s.style.height = H * z + 'px';
+}
+document.querySelectorAll('#sizectl span').forEach(el => el.onclick = () => {
+  zoomMode = el.dataset.z;
+  document.querySelectorAll('#sizectl span').forEach(x => x.classList.toggle('on', x === el));
+  fitWatch();
+});
+addEventListener('resize', fitWatch);
+fitWatch();
+
+// ================= Match settings =================
+let cfg = { fmt: 'doubles', names: [['', ''], ['', '']], first: { t: 0, i: 0 }, bestOf: 3, noAd: false };
+let order = [];   // serve rotation, a list of {t, i}
+
+function buildOrder(c) {
+  const s = c.first.t, r = 1 - s, i = c.first.i;
+  if (c.fmt === 'singles') return [{ t: s, i: 0 }, { t: r, i: 0 }];
+  return [{ t: s, i: i }, { t: r, i: 0 }, { t: s, i: 1 - i }, { t: r, i: 1 }];
+}
+const perTeam = () => cfg.fmt === 'doubles' ? 2 : 1;
+const pname = (t, i) => cfg.names[t][i];
+const teamName = (t, sep = ' / ') => cfg.names[t].slice(0, perTeam()).join(sep);
+const setsToWin = () => Math.ceil(cfg.bestOf / 2);
+
+// ================= Score state =================
+function fresh() { return { p: [0, 0], g: [0, 0], sets: [], tb: false, srv: 0, tbs: 0, tbc: 0 }; }
+let st = fresh(), hist = [], toastTimer, draft, sd;
+const $ = id => document.getElementById(id);
+const ov = $('ov'), pager = $('pager');
+const lab = ['0', '15', '30', '40'];
+const snapshot = () => JSON.stringify({ st, cfg });
+
+// ================= Scoring rules =================
+function won(t) { return st.sets.filter(x => t ? x.b > x.a : x.a > x.b).length; }
+function over() { return won(0) >= setsToWin() ? 0 : won(1) >= setsToWin() ? 1 : -1; }
+
+function disp(t) {
+  const a = st.p[t], b = st.p[1 - t];
+  if (st.tb) return a;
+  if (a >= 3 && b >= 3) return a > b ? 'Ad' : '40';
+  return lab[a];
+}
+function status() {
+  const m = over();
+  if (m >= 0) return 'Match: ' + teamName(m, '/');
+  if (st.tb) return 'Tiebreak';
+  const [a, b] = st.p;
+  if (a >= 3 && b >= 3) {
+    if (a === b) return cfg.noAd ? 'Deciding point' : 'Deuce';
+    return 'Ad ' + teamName(a > b ? 0 : 1, '/');
+  }
+  return '';
+}
+
+function winGame(t) {
+  const n = order.length;
+  if (st.tb) {
+    st.g[t]++;
+    st.sets.push({ a: st.g[0], b: st.g[1], tb: [st.p[0], st.p[1]] });
+    st.g = [0, 0]; st.p = [0, 0]; st.tb = false;
+    st.srv = (st.tbs + 1) % n;
+    return;
+  }
+  st.p = [0, 0];
+  st.g[t]++;
+  st.srv = (st.srv + 1) % n;
+  if (st.g[t] >= 6 && st.g[t] - st.g[1 - t] >= 2) {
+    st.sets.push({ a: st.g[0], b: st.g[1], tb: null });
+    st.g = [0, 0];
+  } else if (st.g[0] === 6 && st.g[1] === 6) {
+    st.tb = true; st.tbs = st.srv; st.tbc = 0;
+  }
+}
+
+function point(t) {
+  if (over() >= 0) return;
+  hist.push(snapshot());
+  const n = order.length;
+  st.p[t]++;
+  if (st.tb) {
+    st.tbc++;
+    if (st.p[t] >= 7 && st.p[t] - st.p[1 - t] >= 2) winGame(t);
+    else if (st.tbc % 2 === 1) st.srv = (st.srv + 1) % n;
+  } else if (cfg.noAd && st.p[t] >= 4) {
+    winGame(t);
+  } else if (st.p[t] >= 4 && st.p[t] - st.p[1 - t] >= 2) {
+    winGame(t);
+  }
+  if (navigator.vibrate) navigator.vibrate(t ? [30, 60, 30] : 40);
+  render();
+  toast('Point ' + teamName(t, '/'));
+}
+
+function undo() {
+  if (!hist.length) { toast('Nothing to undo', true); return; }
+  const o = JSON.parse(hist.pop());
+  st = o.st; cfg = o.cfg; order = buildOrder(cfg);
+  render();
+  toast('Undone', true);
+}
+
+// ================= Display =================
+function isServer(t, i) { const s = order[st.srv]; return s && s.t === t && s.i === i; }
+
+function render() {
+  for (let t = 0; t < 2; t++) {
+    let h = '';
+    for (let i = 0; i < perTeam(); i++) h += (i ? '<br>' : '') + pname(t, i) + (isServer(t, i) ? '<span class="dot"></span>' : '');
+    $('n' + t).innerHTML = h;
+    $('p' + t).textContent = disp(t);
+    $('gs' + t).textContent = 'G ' + st.g[t] + ' · S ' + won(t);
+  }
+  $('info').textContent = (st.tb ? 'TB · ' : '') + 'Set ' + Math.min(st.sets.length + 1, cfg.bestOf);
+  const s = status();
+  $('pill').textContent = s;
+  $('pill').style.visibility = s ? 'visible' : 'hidden';
+  renderBox();
+  $('settings').innerHTML = (cfg.fmt === 'doubles' ? 'Doubles' : 'Singles') + ' · Best of ' + cfg.bestOf +
+    '<br>' + (cfg.noAd ? 'No-ad' : 'Advantage') + ' scoring';
+}
+
+function toast(msg, hideUndo) {
+  $('tmsg').textContent = msg;
+  $('tund').style.visibility = hideUndo ? 'hidden' : 'visible';
+  $('toast').style.visibility = 'visible';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => $('toast').style.visibility = 'hidden', 3000);
+}
+
+function cell(s, t) {
+  const v = t ? s.b : s.a;
+  if (!s.tb) return v;
+  const lost = t ? s.b < s.a : s.a < s.b;
+  return v + (lost ? `<sup style="font-size:9px">${s.tb[t]}</sup>` : '');
+}
+function renderBox() {
+  const m = over();
+  let h = `<div class="h">Box score</div>
+    <table class="bx" style="width:100%;border-collapse:collapse"><tr class="muted"><th></th>`;
+  st.sets.forEach((_, i) => h += `<th>${i + 1}</th>`);
+  if (m < 0) h += `<th>${st.sets.length + 1}</th>`;
+  h += '</tr>';
+  for (let t = 0; t < 2; t++) {
+    h += `<tr style="border-top:0.5px solid #444441"><td style="text-align:left;line-height:1.3" class="${t ? 'teamB' : 'teamA'}">${cfg.names[t].slice(0, perTeam()).join('<br>')}</td>`;
+    st.sets.forEach(s => h += `<td>${cell(s, t)}</td>`);
+    if (m < 0) h += `<td style="color:#EF9F27">${st.g[t]}</td>`;
+    h += '</tr>';
+  }
+  const s = order[st.srv];
+  h += `</table><div class="muted" style="margin:8px 6px 0;font-size:11px;line-height:1.5;text-align:center">
+    ${m >= 0 ? 'Match won by ' + teamName(m)
+      : 'Game ' + disp(0) + '–' + disp(1) + (st.tb ? ' (TB)' : '') + ' · ' + pname(s.t, s.i) + ' serving'}</div>`;
+  $('boxpage').innerHTML = h;
+}
+
+// ================= Swipe pages =================
+function goPage(i) { pager.scrollTo({ left: i * pager.clientWidth, behavior: 'smooth' }); }
+pager.addEventListener('scroll', () => {
+  const i = Math.round(pager.scrollLeft / pager.clientWidth);
+  [...$('dots').children].forEach((d, k) => d.classList.toggle('on', k === i));
+});
+document.addEventListener('keydown', e => {   // arrow keys for desktop testing
+  if (ov.style.display === 'flex') return;
+  const i = Math.round(pager.scrollLeft / pager.clientWidth);
+  if (e.key === 'ArrowRight') goPage(Math.min(2, i + 1));
+  if (e.key === 'ArrowLeft') goPage(Math.max(0, i - 1));
+});
+
+// ================= Overlays =================
+function show(html) { ov.innerHTML = html; ov.style.display = 'flex'; }
+function hide() { ov.style.display = 'none'; }
+
+function confirmNew() {
+  show(`
+    <div style="flex:1;display:flex;flex-direction:column;justify-content:center;text-align:center;padding:0 8px">
+      <i class="ti ti-alert-triangle" style="font-size:22px;color:#EF9F27"></i>
+      <div style="font-size:14px;font-weight:600;margin:6px 0 2px">New match?</div>
+      <div class="muted" style="font-size:11px;margin-bottom:12px">The current score will be cleared.</div>
+      <button class="ub" id="cYes" style="background:#A32D2D;margin-bottom:6px">Yes, start over</button>
+      <button class="ub" id="cNo">Cancel</button>
+    </div>`);
+}
+
+// ----- New match setup -----
+function openSetup(canCancel) {
+  sd = JSON.parse(JSON.stringify(cfg));
+  sd.canCancel = canCancel;
+  renderSetup();
+}
+function seg(key, opts) {
+  return '<div class="seg">' + opts.map(([v, l]) =>
+    `<span data-seg="${key}" data-v="${v}" class="${String(sd[key]) === String(v) ? 'on' : ''}">${l}</span>`).join('') + '</div>';
+}
+function renderSetup() {
+  const k = sd.fmt === 'doubles' ? 2 : 1;
+  let h = `<div class="h" style="text-align:center;margin-left:0">New match</div><div class="scroll">
+    ${seg('fmt', [['singles', 'Singles'], ['doubles', 'Doubles']])}`;
+  for (let t = 0; t < 2; t++) {
+    h += `<div class="lbl ${t ? 'teamB' : 'teamA'}">Team ${t + 1} initials</div>`;
+    for (let i = 0; i < k; i++)
+      h += `<input class="inp" data-nt="${t}" data-ni="${i}" value="${sd.names[t][i]}" maxlength="5"
+             placeholder="P${i + 1}" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false">`;
+  }
+  h += `<div class="lbl">Serves first</div><div class="chips" id="chips"></div>
+    <div class="lbl">Sets</div>${seg('bestOf', [[1, '1'], [3, '3'], [5, '5']])}
+    <div class="lbl">At 40–40</div>${seg('noAd', [[false, 'Ad'], [true, 'No-ad']])}
+    ${k === 2 ? '<div class="muted" style="font-size:10.5px;margin-top:6px;line-height:1.4">Receiving team: put its first server on top.</div>' : ''}
+    </div><div id="serr"></div>
+    <div style="display:flex;gap:6px;padding:0 6px">
+      ${sd.canCancel ? '<button class="ub" id="sNo" style="flex:1">Cancel</button>' : ''}
+      <button class="ub" id="sYes" style="flex:2;background:#0F6E56">Start</button></div>`;
+  show(h);
+  renderChips();
+}
+function renderChips() {
+  const k = sd.fmt === 'doubles' ? 2 : 1;
+  if (sd.first.i >= k) sd.first.i = 0;
+  let h = '';
+  for (let t = 0; t < 2; t++) for (let i = 0; i < k; i++) {
+    const on = sd.first.t === t && sd.first.i === i;
+    h += `<span class="chip ${on ? 'on' : ''}" data-ft="${t}" data-fi="${i}">${sd.names[t][i] || 'T' + (t + 1) + 'P' + (i + 1)}</span>`;
+  }
+  $('chips').innerHTML = h;
+}
+function startMatch() {
+  const k = sd.fmt === 'doubles' ? 2 : 1, seen = {};
+  let err = '';
+  ov.querySelectorAll('.inp').forEach(el => el.classList.remove('err'));
+  for (let t = 0; t < 2; t++) for (let i = 0; i < k; i++) {
+    const v = sd.names[t][i], el = ov.querySelector(`[data-nt="${t}"][data-ni="${i}"]`);
+    if (!v) { err = err || 'Enter all initials'; el.classList.add('err'); }
+    else if (seen[v]) { err = err || 'Initials must differ'; el.classList.add('err'); }
+    seen[v] = true;
+  }
+  if (err) { $('serr').textContent = err; return; }
+  if (sd.canCancel) hist.push(snapshot());   // even a new match can be undone
+  const c = JSON.parse(JSON.stringify(sd)); delete c.canCancel;
+  cfg = c; order = buildOrder(cfg); st = fresh();
+  hide(); render(); goPage(0);
+}
+
+// ----- Edit score -----
+function step(k, t, v) {
+  return `<span style="display:inline-flex;align-items:center;gap:5px">
+    <span class="sb" data-k="${k}" data-t="${t}" data-d="-1">−</span>
+    <span class="${t ? 'teamB' : 'teamA'}" style="min-width:14px;text-align:center;font-size:13px">${v}</span>
+    <span class="sb" data-k="${k}" data-t="${t}" data-d="1">+</span></span>`;
+}
+function row(k, label, a, b) {
+  return `<div style="margin-bottom:8px"><div class="muted" style="font-size:11px;margin-bottom:3px">${label}</div>
+    <div style="display:flex;justify-content:space-between">${step(k, 0, a)}${step(k, 1, b)}</div></div>`;
+}
+function renderEdit() {
+  const s = order[draft.srv];
+  let h = `<div class="h" style="text-align:center;margin-left:0">Edit games</div>
+    <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:6px;padding:0 2px">
+      <span class="teamA">${teamName(0, '/')}</span><span class="teamB">${teamName(1, '/')}</span></div>
+    <div class="scroll">`;
+  draft.sets.forEach((x, i) => h += row(i, 'Set ' + (i + 1), x.a, x.b));
+  h += row('c', 'Set ' + (draft.sets.length + 1) + ' (now)', draft.g[0], draft.g[1]);
+  h += `<div id="esrv" style="background:#2C2C2A;border-radius:10px;padding:7px 10px;cursor:pointer;font-size:11px">
+      Serve: ${pname(s.t, s.i)}<span class="dot"></span><span class="muted" style="float:right">tap</span></div></div>
+    <div style="display:flex;gap:6px;margin-top:8px;padding:0 6px">
+      <button class="ub" id="eNo" style="flex:1">Cancel</button>
+      <button class="ub" id="eYes" style="flex:1;background:#0F6E56">Save</button></div>`;
+  show(h);
+}
+
+// ----- Overlay events -----
+ov.addEventListener('input', e => {
+  const el = e.target;
+  if (el.dataset.nt === undefined) return;
+  const v = el.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5);
+  el.value = v;
+  el.classList.remove('err'); $('serr').textContent = '';
+  sd.names[+el.dataset.nt][+el.dataset.ni] = v;
+  renderChips();
+});
+ov.addEventListener('click', e => {
+  const el = e.target.closest('[id],[data-d],[data-seg],[data-ft]');
+  if (!el) return;
+  if (el.dataset.seg) {
+    const key = el.dataset.seg, v = el.dataset.v;
+    sd[key] = key === 'bestOf' ? +v : key === 'noAd' ? v === 'true' : v;
+    renderSetup(); return;
+  }
+  if (el.dataset.ft !== undefined) { sd.first = { t: +el.dataset.ft, i: +el.dataset.fi }; renderChips(); return; }
+  if (el.dataset.d) {
+    const k = el.dataset.k, t = +el.dataset.t, d = +el.dataset.d;
+    if (k === 'c') draft.g[t] = Math.max(0, draft.g[t] + d);
+    else { const f = t ? 'b' : 'a'; draft.sets[k][f] = Math.max(0, draft.sets[k][f] + d); }
+    renderEdit(); return;
+  }
+  switch (el.id) {
+    case 'cNo': case 'eNo': case 'sNo': hide(); break;
+    case 'cYes': openSetup(true); break;
+    case 'sYes': startMatch(); break;
+    case 'esrv': draft.srv = (draft.srv + 1) % order.length; renderEdit(); break;
+    case 'eYes':
+      hist.push(snapshot());
+      st = draft;
+      if (st.g[0] === 6 && st.g[1] === 6) {
+        if (!st.tb) { st.tb = true; st.tbs = st.srv; st.tbc = 0; st.p = [0, 0]; }
+      } else if (st.tb) { st.tb = false; st.p = [0, 0]; }
+      hide(); render(); goPage(0); toast('Score edited');
+      break;
+  }
+});
+
+// ================= Buttons =================
+$('h0').onclick = () => point(0);
+$('h1').onclick = () => point(1);
+$('undo').onclick = undo;
+$('tund').onclick = undo;
+$('reset').onclick = confirmNew;
+$('crown').onclick = () => { if (ov.style.display !== 'flex') { goPage(0); undo(); } };
+$('mUndo').onclick = () => { undo(); goPage(0); };
+$('mEdit').onclick = () => { draft = JSON.parse(JSON.stringify(st)); renderEdit(); };
+$('mNew').onclick = confirmNew;
+
+// Start with the setup screen
+order = buildOrder(cfg);
+openSetup(false);
+</script>
+</body>
+</html>
