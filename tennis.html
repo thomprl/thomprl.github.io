@@ -130,7 +130,7 @@
           <div class="page" id="boxpage"></div>
 
           <!-- Page 3: Menu -->
-          <div class="page">
+          <div class="page" style="overflow-y:auto">
             <div class="h">Menu</div>
             <button class="ub big" id="mUndo"><i class="ti ti-arrow-back-up"></i>Undo point</button>
             <button class="ub big" id="mEdit"><i class="ti ti-edit"></i>Edit score</button>
@@ -169,7 +169,9 @@ addEventListener('resize', fitWatch);
 fitWatch();
 
 // ================= Match settings =================
-let cfg = { fmt: 'doubles', names: [['', ''], ['', '']], first: { t: 0, i: 0 }, bestOf: 3, noAd: false };
+// tapMode: 'halves' = tap a team's half; 'taps' = tap once for myTeam, twice for the other team
+let cfg = { fmt: 'doubles', names: [['', ''], ['', '']], first: { t: 0, i: 0 }, bestOf: 3, noAd: false,
+            tapMode: 'halves', myTeam: 0, voice: true };
 let order = [];   // serve rotation, a list of {t, i}
 
 function buildOrder(c) {
@@ -232,8 +234,44 @@ function winGame(t) {
   }
 }
 
+// ================= Spoken score =================
+// Tennis convention: the server's score is called first.
+const WORDS = ['love', 'fifteen', 'thirty', 'forty'];
+const spell = n => n.length <= 3 ? n.split('').join(' ') : n;          // "KS" -> "K S"
+const say = t => cfg.names[t].slice(0, perTeam()).map(spell).join(' and ');
+
+function scoreCall() {
+  const sv = order[st.srv].t, a = st.p[sv], r = st.p[1 - sv];
+  if (st.tb) return a === r ? a + ' all' : a + ', ' + r;
+  if (a >= 3 && r >= 3) {
+    if (a === r) return cfg.noAd ? 'Deuce. Deciding point' : 'Deuce';
+    return 'Advantage ' + say(a > r ? sv : 1 - sv);
+  }
+  return a === r ? WORDS[a] + ' all' : WORDS[a] + ', ' + WORDS[r];
+}
+function countCall(x, y) {                       // "4 2, K S" or "3 all"
+  if (x === y) return x + ' all';
+  const lead = x > y ? 0 : 1;
+  return Math.max(x, y) + ' ' + Math.min(x, y) + ', ' + say(lead);
+}
+function pointCall(before, t) {
+  const m = over();
+  if (m >= 0) return 'Game, set, and match, ' + say(m);
+  if (st.sets.length > before.sets) return 'Game and set, ' + say(t) + '. Sets, ' + countCall(won(0), won(1));
+  if (st.g[0] + st.g[1] !== before.games) return 'Game, ' + say(t) + '. ' + countCall(st.g[0], st.g[1]) + (st.tb ? '. Tiebreak' : '');
+  return scoreCall();
+}
+function speak(text) {
+  if (!cfg.voice || !window.speechSynthesis) return;
+  speechSynthesis.cancel();                      // don't let calls pile up
+  const u = new SpeechSynthesisUtterance(text);
+  u.rate = 1.05;
+  speechSynthesis.speak(u);
+}
+
 function point(t) {
   if (over() >= 0) return;
+  const before = { sets: st.sets.length, games: st.g[0] + st.g[1] };
   hist.push(snapshot());
   const n = order.length;
   st.p[t]++;
@@ -249,6 +287,7 @@ function point(t) {
   if (navigator.vibrate) navigator.vibrate(t ? [30, 60, 30] : 40);
   render();
   toast('Point ' + teamName(t, '/'));
+  speak(pointCall(before, t));
 }
 
 function undo() {
@@ -257,6 +296,7 @@ function undo() {
   st = o.st; cfg = o.cfg; order = buildOrder(cfg);
   render();
   toast('Undone', true);
+  speak('Undo. ' + scoreCall());
 }
 
 // ================= Display =================
@@ -268,7 +308,8 @@ function render() {
     for (let i = 0; i < perTeam(); i++) h += (i ? '<br>' : '') + pname(t, i) + (isServer(t, i) ? '<span class="dot"></span>' : '');
     $('n' + t).innerHTML = h;
     $('p' + t).textContent = disp(t);
-    $('gs' + t).textContent = 'G ' + st.g[t] + ' · S ' + won(t);
+    $('gs' + t).textContent = 'G ' + st.g[t] + ' · S ' + won(t) +
+      (cfg.tapMode === 'taps' ? ' · ' + (t === cfg.myTeam ? '1×' : '2×') : '');
   }
   $('info').textContent = (st.tb ? 'TB · ' : '') + 'Set ' + Math.min(st.sets.length + 1, cfg.bestOf);
   const s = status();
@@ -276,7 +317,9 @@ function render() {
   $('pill').style.visibility = s ? 'visible' : 'hidden';
   renderBox();
   $('settings').innerHTML = (cfg.fmt === 'doubles' ? 'Doubles' : 'Singles') + ' · Best of ' + cfg.bestOf +
-    '<br>' + (cfg.noAd ? 'No-ad' : 'Advantage') + ' scoring';
+    '<br>' + (cfg.noAd ? 'No-ad' : 'Advantage') + ' scoring' +
+    ' · Voice ' + (cfg.voice ? 'on' : 'off') +
+    '<br>' + (cfg.tapMode === 'taps' ? '1 tap: ' + teamName(cfg.myTeam, '/') + ' · 2 taps: ' + teamName(1 - cfg.myTeam, '/') : 'Tap a half to score');
 }
 
 function toast(msg, hideUndo) {
@@ -385,6 +428,9 @@ function renderSetup() {
   h += `<div class="lbl">Serves first</div><div class="chips" id="chips"></div>
     <div class="lbl">Sets</div>${seg('bestOf', [[1, '1'], [3, '3'], [5, '5']])}
     <div class="lbl">At 40–40</div>${seg('noAd', [[false, 'Ad'], [true, 'No-ad']])}
+    <div class="lbl">How to score</div>${seg('tapMode', [['halves', 'Halves'], ['taps', '1× / 2×']])}
+    ${sd.tapMode === 'taps' ? '<div class="lbl">Your team (1 tap)</div>' + seg('myTeam', [[0, 'Team 1'], [1, 'Team 2']]) : ''}
+    <div class="lbl">Say the score</div>${seg('voice', [[true, 'On'], [false, 'Off']])}
     ${k === 2 ? '<div class="muted" style="font-size:10.5px;margin-top:6px;line-height:1.4">Receiving team: put its first server on top.</div>' : ''}
     </div><div id="serr"></div>
     <div style="display:flex;gap:6px;padding:0 6px">
@@ -462,7 +508,7 @@ ov.addEventListener('click', e => {
   if (!el) return;
   if (el.dataset.seg) {
     const key = el.dataset.seg, v = el.dataset.v;
-    sd[key] = key === 'bestOf' ? +v : key === 'noAd' ? v === 'true' : v;
+    sd[key] = (key === 'bestOf' || key === 'myTeam') ? +v : (key === 'noAd' || key === 'voice') ? v === 'true' : v;
     renderSetup(); return;
   }
   if (el.dataset.ft !== undefined) { sd.first = { t: +el.dataset.ft, i: +el.dataset.fi }; renderChips(); return; }
@@ -489,8 +535,20 @@ ov.addEventListener('click', e => {
 });
 
 // ================= Buttons =================
-$('h0').onclick = () => point(0);
-$('h1').onclick = () => point(1);
+// In 1×/2× mode, wait briefly after a tap to see if a second tap is coming
+const DOUBLE_TAP_MS = 320;
+let tapTimer = null;
+function tapZone(t) {
+  if (cfg.tapMode !== 'taps') { point(t); return; }
+  if (tapTimer) {                       // second tap arrived in time: other team
+    clearTimeout(tapTimer); tapTimer = null;
+    point(1 - cfg.myTeam);
+  } else {                              // first tap: wait, then it's my team
+    tapTimer = setTimeout(() => { tapTimer = null; point(cfg.myTeam); }, DOUBLE_TAP_MS);
+  }
+}
+$('h0').onclick = () => tapZone(0);
+$('h1').onclick = () => tapZone(1);
 $('undo').onclick = undo;
 $('tund').onclick = undo;
 $('reset').onclick = confirmNew;
